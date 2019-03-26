@@ -39,6 +39,19 @@
 + On utilisera des *docstrings* au format [*Doxygen*](http://www.doxygen.nl/manual/docblocks.html)
 + On utilisera [*CMake*](https://cmake.org/) comme système de build
 + Convention pour les accolades : [*1TBS*](https://en.wikipedia.org/wiki/Indentation_style#Variant:_1TBS_(OTBS))
++ Les pointeurs porteront un préfixe `p_` (exemple, un pointeur vers une structure `Addr` sera déclaré : `Addr *p_addr`)
++ Les "méthodes" porteront en préfixe le nom de leur classe suivi de deux *underscore*s (exemple, pour la méthode `set` de la classe `Addr`, on aura le prototype `void Addr__set(Addr *p_addr, uint8_t my_value);`)
++ Aucune abbréviation, sauf
+    - `sock` pour `socket`
+    - `inet` pour `internet`
+    - `addr` pour `address`
+    - `recv` pour `receive`
++ Toutes les méthodes prendront comme premier argument un pointeur vers la *struct* à traiter, avec pour nom `p_nom_de_la_classe_en_snake_case`
++ Il est conseillé de *typedef* avec un nom significatif suivi du suffixe `_t` les types primitifs utilisés (exemple, pour la valeur d'un pixel stockée dans un char : `typedef char pixel_t`)
++ Il est nécessaire de *typedef* les structures utilisées, avec un nom en *CamelCase* (exemple, pour la structure `struct sockaddr_in` : `typedef struct sockaddr_in SockAddrInet`)
++ Chaque *struct* possédera une méthode obligatoire :
+    - `MyStruct__set(MyStruct *p_my_struct, ...)` : une sorte de constructeur, qui fixe les valeurs des champs de la structure
++ Les `malloc`s et associés seront évités au maximum
 
 ## Conventions spécifiques à Git(Lab)
 
