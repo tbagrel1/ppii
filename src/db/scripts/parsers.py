@@ -212,6 +212,7 @@ def parse_table(input_path, table_name, table_output_rules, output_as_lists=Fals
                 if field_format["parser"] == drop:
                     continue
                 output_list[field_format["pos"]] = output_row[field_format["name"]]
+            output_lists.append(output_list)
         return output_lists
 
     return output_data
@@ -263,7 +264,8 @@ def main():
     # test_codes("airline", lambda x: (x[3], x[4]))
     # test_codes("plane", lambda x: (x[1], x[2]))
 
-    parse_table("resources/airports.dat", "Airport", AIRPORT_OUTPUT_RULES, False)
+    res = parse_table("resources/airports.dat", "Airport", AIRPORT_OUTPUT_RULES, True)
+    print(res[:200])
 
 if __name__ == "__main__":
     main()
