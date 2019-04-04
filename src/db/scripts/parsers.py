@@ -5,7 +5,7 @@
 disponibles par https://openflights.org/.
 """
 
-__author__ = "Thimothée Adam, Thomas Bagrel"
+__author__ = "Timothée Adam, Thomas Bagrel"
 __copyright__ = "Copyright 2019, PPII-A1"
 __credits__ = ["Thimothée Adam", "Thomas Bagrel"]
 __license__ = "Private"
