@@ -16,6 +16,8 @@ __license__ = "Private"
 from transliterate import translit
 import csv
 import re
+import json
+import string
 
 # PLACEHOLDER: global variables
 
@@ -48,11 +50,84 @@ def code_validator_builder(rec):
     return validator
 
 
-def field_as_is(text):
-    text = text.strip()
-    if text != "\\N":
-        return text
+def save_to_live(names_types):
+    for name, type_ in names_types:
+        try:
+            path = "resources/{}.json".format(name)
+            with open(path, "r", encoding="utf-8") as save_file:
+                globals()[name] = json.load(save_file)
+                print("--- LOADED: {}".format(path))
+        except:
+            globals()[name] = type_()
+            print("--- CREATED: {}".format(name))
+    print("\n")
+
+
+def live_to_save(names):
+    choice = input("\n\n Save filtered strings? [Yes/no] ").lower()
+    if choice in ["n", "no"]:
+        return
+    for name in names:
+        path = "resources/{}.json".format(name)
+        with open(path, "w", encoding="utf-8") as save_file:
+            json.dump(globals()[name], save_file)
+            print("--- SAVED: {}".format(path))
+
+
+save_to_live([
+    ("to_keep", list),
+    ("to_discard", list),
+    ("to_edit", dict)
+])
+
+
+def is_strange(text):
+    if len(text) <= 1:
+        return True
+    count = 0
+    for letter in text:
+        if letter in string.ascii_letters + " ":
+            count += 1
+    ascii_ratio = count / len(text)
+    if ascii_ratio < 0.5:
+        return True
+    return False
+
+
+def keep_edit_discard(field, value):
+    choice = input("{}: >>>{}<<< [keep/edit/Discard]? ".format(field, value)).lower()
+    if choice in ["k", "keep"]:
+        to_keep.append(value)
+        print()
+        return value
+    if choice in ["e", "edit"]:
+        new_value = input("Replacement: >>>")
+        choice = input("New {}: >>>{}<<< [Yes/no]? ".format(field, new_value)).lower()
+        if choice in ["n", "no"]:
+            return keep_edit_discard(field, value)
+        to_edit[value] = new_value
+        print()
+        return new_value
+    to_discard.append(value)
+    print()
     return None
+
+
+def field_as_is(field):
+    def _as_is(text):
+        text = text.strip()
+        if text == "\\N" or not text:
+            return None
+        if text in to_keep:
+            return text
+        if text in to_edit:
+            return to_edit[text]
+        if text in to_discard:
+            return None
+        if is_strange(text):
+            return keep_edit_discard(field, text)
+        return text
+    return _as_is
 
 
 def parse_float(text):
@@ -66,50 +141,79 @@ def parse_float(text):
 def drop(text):
     return None
 
-# +---------------------------------------------------------------------------+
-# |                              Airport parsers                              |
-# +---------------------------------------------------------------------------+
 
-airport_icao = code_validator_builder(AIRPORT_ICAO_REC)
-airport_iata = code_validator_builder(AIRPORT_IATA_REC)
-airport_name = field_as_is
-def airport_type(text):
-    text = text.strip().lower()
-    if text in ["airport", "station", "port"]:
-        return text
-    return None
-airport_city = field_as_is
-airport_country = field_as_is
-def airport_long(text):
+city = field_as_is("city")
+
+country = field_as_is("country")
+
+
+def long(text):
     val = parse_float(text)
     if val is not None and -180.0 <= val < 180.0:
         return val
     return None
-def airport_lat(text):
+
+
+def lat(text):
     val = parse_float(text)
     if val is not None and -90.0 <= val < 90.0:
         return val
     return None
-def airport_altitude_with_ft_to_m_conversion(text):
+
+
+def altitude_with_ft_to_m_conversion(text):
     val = parse_float(text)
     if val is not None:
         val *= FT_TO_M
         if -1000 <= val <= 9000:
             return val
     return None
-def airport_utc_offset(text):
+
+
+def utc_offset(text):
     val = parse_float(text)
     if val is not None and -12.0 <= val <= 14.0:
         return val
     return None
-def airport_daylight_saving_group(text):
+
+
+def daylight_saving_group(text):
     text = text.strip().upper()
     if text in ["E", "A", "S", "O", "Z", "N"]:
         return text
     return None
-def airport_tz_name(text):
+
+
+def tz_name(text):
     text = text.strip()
     if TZ_OLSON_NAME_REC.search(text) is not None:
+        return text
+    return None
+
+
+def yes_no(text):
+    text = text.strip().lower()
+    if text == "y":
+        return True
+    if text == "n":
+        return False
+    return None
+
+
+# +---------------------------------------------------------------------------+
+# |                              Airport parsers                              |
+# +---------------------------------------------------------------------------+
+
+airport_icao = code_validator_builder(AIRPORT_ICAO_REC)
+
+airport_iata = code_validator_builder(AIRPORT_IATA_REC)
+
+airport_name = field_as_is("name")
+
+
+def airport_type(text):
+    text = text.strip().lower()
+    if text in ["airport", "station", "port"]:
         return text
     return None
 
@@ -119,16 +223,16 @@ AIRPORT_OUTPUT_RULES = {
     "format": [
         {"parser": drop, "pos": DROP, "name": "id", "opt": True},
         {"parser": airport_name, "pos": 2, "name": "name", "opt": False},
-        {"parser": airport_city, "pos": 4, "name": "city", "opt": False},
-        {"parser": airport_country, "pos": 5, "name": "country", "opt": False},
+        {"parser": city, "pos": 4, "name": "city", "opt": True},
+        {"parser": country, "pos": 5, "name": "country", "opt": False},
         {"parser": airport_iata, "pos": 1, "name": "iata", "opt": True},
         {"parser": airport_icao, "pos": 0, "name": "icao", "opt": False},
-        {"parser": airport_lat, "pos": 7, "name": "lat", "opt": False},
-        {"parser": airport_long, "pos": 6, "name": "long", "opt": False},
-        {"parser": airport_altitude_with_ft_to_m_conversion, "pos": 8, "name": "altitude", "opt": True},
-        {"parser": airport_utc_offset, "pos": 9, "name": "utc_offset", "opt": True},
-        {"parser": airport_daylight_saving_group, "pos": 10, "name": "daylight_saving_group", "opt": True},
-        {"parser": airport_tz_name, "pos": 11, "name": "tz_name", "opt": True},
+        {"parser": lat, "pos": 7, "name": "lat", "opt": False},
+        {"parser": long, "pos": 6, "name": "long", "opt": False},
+        {"parser": altitude_with_ft_to_m_conversion, "pos": 8, "name": "altitude", "opt": True},
+        {"parser": utc_offset, "pos": 9, "name": "utc_offset", "opt": True},
+        {"parser": daylight_saving_group, "pos": 10, "name": "daylight_saving_group", "opt": True},
+        {"parser": tz_name, "pos": 11, "name": "tz_name", "opt": True},
         {"parser": airport_type, "pos": 3, "name": "type", "opt": True},
         {"parser": drop, "pos": DROP, "name": "source", "opt": "True"}
     ]
@@ -139,16 +243,47 @@ AIRPORT_OUTPUT_RULES = {
 # +---------------------------------------------------------------------------+
 
 airline_iata = code_validator_builder(AIRLINE_IATA_REC)
+
 airline_icao = code_validator_builder(AIRLINE_ICAO_REC)
 
+airline_name = field_as_is("name")
+
+airline_alias = field_as_is("alias")
+
+airline_callsign = field_as_is("callsign")
+
+AIRLINE_OUTPUT_RULES = {
+    "length": 7,
+    "format": [
+        {"parser": drop, "pos": DROP, "name": "id", "opt": True},
+        {"parser": airline_name, "pos": 2, "name": "name", "opt": False},
+        {"parser": airline_alias, "pos": 3, "name": "alias", "opt": True},
+        {"parser": airline_iata, "pos": 1, "name": "iata", "opt": True},
+        {"parser": airline_icao, "pos": 0, "name": "icao", "opt": False},
+        {"parser": airline_callsign, "pos": 4, "name": "callsign", "opt": True},
+        {"parser": country, "pos": 5, "name": "country", "opt": True},
+        {"parser": yes_no, "pos": 6, "name": "is_active", "opt": True}
+    ]
+}
 
 # +---------------------------------------------------------------------------+
 # |                               Plane parsers                               |
 # +---------------------------------------------------------------------------+
 
 plane_iata = code_validator_builder(PLANE_IATA_REC)
+
 plane_icao = code_validator_builder(PLANE_ICAO_REC)
 
+plane_name = field_as_is("name")
+
+PLANE_OUTPUT_RULES = {
+    "length": 3,
+    "format": [
+        {"parser": plane_name, "pos": 2, "name": "name", "opt": False},
+        {"parser": plane_iata, "pos": 0, "name": "iata", "opt": False},
+        {"parser": plane_icao, "pos": 1, "name": "icao", "opt": True}
+    ]
+}
 
 # +---------------------------------------------------------------------------+
 # |                                  Testing                                  |
@@ -264,8 +399,17 @@ def main():
     # test_codes("airline", lambda x: (x[3], x[4]))
     # test_codes("plane", lambda x: (x[1], x[2]))
 
-    res = parse_table("resources/airports.dat", "Airport", AIRPORT_OUTPUT_RULES, True)
-    print(res[:200])
+    res = parse_table("resources/planes.dat", "Plane", PLANE_OUTPUT_RULES, True)
+    # res = parse_table("resources/airports.dat", "Airport", AIRPORT_OUTPUT_RULES, True)
+    # res = parse_table("resources/airlines.dat", "Airline", AIRLINE_OUTPUT_RULES, True)
+    print(res[:min(len(res), 200)])
+
 
 if __name__ == "__main__":
     main()
+
+live_to_save([
+    "to_keep",
+    "to_discard",
+    "to_edit"
+])
