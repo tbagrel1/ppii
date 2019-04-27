@@ -104,8 +104,74 @@ class JsonPersistance:
 
 
 def color_escapes(color_code):
-    return ("\u001b[38;5;{}m".format(color_code), "\u001b[0m")
+    return "\u001b[38;5;{}m".format(color_code), "\u001b[0m"
 
+
+def memorize_unique_choice(unique_choice_memory, context, unique_field, unique_field_value, choice_no, total_choices_nb):
+    if context not in unique_choice_memory:
+        unique_choice_memory[context] = {}
+    if unique_field not in unique_choice_memory[context]:
+        unique_choice_memory[context][unique_field] = {}
+    unique_choice_memory[context][unique_field][unique_field_value] = (choice_no, total_choices_nb)
+
+
+def is_memorized_unique_choice(unique_choice_memory, context, unique_field, unique_field_value):
+    if context not in unique_choice_memory:
+        return False
+    if unique_field not in unique_choice_memory[context]:
+        return False
+    if unique_field_value not in unique_choice_memory[context][unique_field]:
+        return False
+    return True
+
+
+def ask_unique_choice(unique_field, rows):
+    print("[{}: {}]".format(unique_field, rows[0][unique_field]))
+    for i, row in enumerate(rows):
+        text_for_default_choice = " (default)" if i == 0 else ""
+        print("    {}) {} {}".format(i, row, text_for_default_choice))
+    raw_choice_no = input(">>> ").strip()
+    try:
+        choice_no = int(raw_choice_no)
+        if choice_no not in range(len(rows)):
+            raise Exception("Choice no not in allowed range: {} vs [{}-{}]"
+                            .format(choice_no, 0, len(rows) - 1))
+        print()
+        return choice_no
+    except:
+        print()
+        return 0
+
+
+def make_unique(data, context, unique_field, unique_choice_memory):
+    unique_field_to_rows = {}
+    for row in data:
+        unique_field_value = row[unique_field]
+        if unique_field_value not in unique_field_to_rows:
+            unique_field_to_rows[unique_field_value] = []
+        unique_field_to_rows[unique_field_value].append(row)
+
+    result = []
+    for unique_field_value, rows in unique_field_to_rows.items():
+        if len(rows) == 1:
+            result.append(rows[0])
+        else:
+            if is_memorized_unique_choice(
+                    unique_choice_memory, context, unique_field,
+                    unique_field_value):
+                memorized_choice_no, memorized_total_choices_nb = \
+                    unique_choice_memory[context][unique_field][unique_field_value]
+                if memorized_total_choices_nb == len(rows):
+                    result.append(rows[memorized_choice_no])
+                    continue
+            # si pas trouvé en mémoire
+            choice_no = ask_unique_choice(unique_field, rows)
+            memorize_unique_choice(
+                unique_choice_memory, context, unique_field,
+                unique_field_value, choice_no, len(rows))
+            result.append(rows[choice_no])
+
+    return result
 
 # +---------------------------------------------------------------------------+
 # |                              Airport parsers                              |
@@ -250,7 +316,14 @@ def main():
             ], ask_confirmation=False) as memory:
         planes = parse_table(path.join(RESOURCES_ROOT_DIR, "planes.dat"), "Plane", PLANE_PARSING_RULES, *memory)
         airports = parse_table(path.join(RESOURCES_ROOT_DIR, "airports.dat"), "Airport", AIRPORT_PARSING_RULES, *memory)
-        airline = parse_table(path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline", AIRLINE_PARSING_RULES, *memory)
+        airlines = parse_table(path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline", AIRLINE_PARSING_RULES, *memory)
+    with JsonPersistance(PERSISTANCE_ROOT_DIR, [
+                ("unique_choice.json", dict)
+            ], ask_confirmation=False) as memory:
+        memory = memory[0]
+        planes = make_unique(planes, "Plane", "iata", memory)
+        airports = make_unique(airports, "Airport", "icao", memory)
+        airlines = make_unique(airlines, "Airline", "icao", memory)
 
 if __name__ == "__main__":
     main()
