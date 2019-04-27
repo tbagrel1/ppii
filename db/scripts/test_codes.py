@@ -43,7 +43,7 @@ def code_validator(type_, name, text):
 def test_codes(name, extract_iata_icao):
     print("===== {}S =====\n".format(name.upper()))
 
-    with open("resources/{}s.dat".format(name), "r", encoding=ENC) as file:
+    with open("../../resources/{}s.dat".format(name), "r", encoding=ENC) as file:
         parser = csv.reader(file, delimiter=",", quotechar="\"")
         data = [list(row) for row in parser]
 

@@ -17,7 +17,7 @@ import csv
 import json
 
 
-from db.scripts.parsers import *
+from parsers import *
 
 
 ENC = "utf-8"
@@ -39,7 +39,8 @@ SEVERITY_TO_COLOR = {
     ERROR: 196
 }
 
-PERSISTANCE_ROOT_DIR = "resources/json_persistance"
+RESOURCES_ROOT_DIR = "../../resources"
+PERSISTANCE_ROOT_DIR = path.join(RESOURCES_ROOT_DIR, "json_persistance")
 
 
 def _should_(prompt_part, path_):
@@ -247,9 +248,9 @@ def main():
                 ("to_edit.json", dict),
                 ("to_discard.json", dict),
             ], ask_confirmation=False) as memory:
-        planes = parse_table("resources/planes.dat", "Plane", PLANE_PARSING_RULES, *memory)
-        airports = parse_table("resources/airports.dat", "Airport", AIRPORT_PARSING_RULES, *memory)
-        airline = parse_table("resources/airlines.dat", "Airline", AIRLINE_PARSING_RULES, *memory)
+        planes = parse_table(path.join(RESOURCES_ROOT_DIR, "planes.dat"), "Plane", PLANE_PARSING_RULES, *memory)
+        airports = parse_table(path.join(RESOURCES_ROOT_DIR, "airports.dat"), "Airport", AIRPORT_PARSING_RULES, *memory)
+        airline = parse_table(path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline", AIRLINE_PARSING_RULES, *memory)
 
 if __name__ == "__main__":
     main()
