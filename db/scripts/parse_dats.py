@@ -153,6 +153,8 @@ def make_unique(data, context, unique_field, unique_choice_memory):
 
     result = []
     for unique_field_value, rows in unique_field_to_rows.items():
+        if unique_field_value is None:
+            continue
         if len(rows) == 1:
             result.append(rows[0])
         else:
@@ -172,6 +174,9 @@ def make_unique(data, context, unique_field, unique_choice_memory):
             result.append(rows[choice_no])
 
     return result
+
+def index_list_by(data, field):
+    return {row[field]: row for row in data}
 
 # +---------------------------------------------------------------------------+
 # |                              Airport parsers                              |
@@ -321,9 +326,25 @@ def main():
                 ("unique_choice.json", dict)
             ], ask_confirmation=False) as memory:
         memory = memory[0]
-        planes = make_unique(planes, "Plane", "iata", memory)
-        airports = make_unique(airports, "Airport", "icao", memory)
-        airlines = make_unique(airlines, "Airline", "icao", memory)
+
+        # Identification pour Plane : IATA en premier, ICAO en secours
+        planes_iata_unique = make_unique(planes, "Plane", "iata", memory)
+        planes_iata_to_plane = index_list_by(planes_iata_unique, "iata")
+        _planes_icao_unique = make_unique(planes_iata_unique, "_Plane", "icao", memory)
+        planes_icao_to_plane = index_list_by(_planes_icao_unique, "icao")
+
+        # Identification pour Airport : ICAO en premier, IATA en secours
+        airports_icao_unique = make_unique(airports, "Airport", "icao", memory)
+        airports_icao_to_airport = index_list_by(airports_icao_unique, "icao")
+        _airports_iata_unique = make_unique(airports_icao_unique, "_Airport", "iata", memory)
+        airports_iata_to_airport = index_list_by(_airports_iata_unique, "iata")
+
+        # Identification pour Airline : ICAO en premier, IATA en secours
+        airlines_icao_unique = make_unique(airlines, "Airline", "icao", memory)
+        airlines_icao_to_airline = index_list_by(airlines_icao_unique, "icao")
+        _airlines_iata_unique = make_unique(airlines_icao_unique, "_Airline", "iata", memory)
+        airlines_iata_to_airline = index_list_by(_airlines_iata_unique, "iata")
+
 
 if __name__ == "__main__":
     main()
