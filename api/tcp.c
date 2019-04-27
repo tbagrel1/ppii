@@ -1,4 +1,6 @@
-#include "easy_socket.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include "lib/easy_socket.h"
 #include "string.h"
 
 

@@ -99,12 +99,18 @@ ret_t open_sock_inet_tcp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
  * @return une valeur RET
  */
 ret_t open_sock_inet_tcp_serv(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, size_t queue_max_size) {
-    ret_t return_value = open_sock_inet_tcp(p_sock_fd, p_sock_addr_inet);
-    if (!is_ret_ok(return_value)) {
-        return return_value;
+    *p_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (*p_sock_fd == -1) {
+        printf("err socket\n");
+        return RET_ERRNO_ERR;
+    }
+    if (bind(*p_sock_fd, (SockAddr *) (p_sock_addr_inet), SOCK_ADDR_INET_LEN) == -1) {
+        printf("err bind\n");
+        return RET_ERRNO_ERR;
     }
 
     if (listen(*p_sock_fd, (int) queue_max_size) == -1) {
+        printf("err listen\n");
         return RET_ERRNO_ERR;
     }
 
@@ -122,7 +128,11 @@ void _reset_sets(sock_fd_t serv_sock_fd, const fd_set *p_client_set,
     FD_CLR(serv_sock_fd, p_except_set);
 }
 
-ret_t run_multiplexed_serv(sock_fd_t serv_sock_fd, double timeout) {
+ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
+                               action_on_connect_fp p_action_on_connect,
+                               action_on_client_fp p_action,
+                               action_on_disconnect_fp p_action_on_disconnect,
+                               bool tigger_without_read_ready) {
     fd_set client_set, read_set, write_set, except_set;
     FD_ZERO(&client_set);
     Timeval timeval_timeout;
@@ -131,8 +141,9 @@ ret_t run_multiplexed_serv(sock_fd_t serv_sock_fd, double timeout) {
     int new_client_sock_fd;
     SockAddr client_sock_addr;
     sock_addr_size_t client_sock_addr_size;
+    ret_t ret_value;
 
-    while (true) {
+    for (;;) {
         _reset_sets(serv_sock_fd, &client_set, &read_set, &write_set, &except_set);
         timeval_timeout.tv_sec = (long) (timeout);
         timeval_timeout.tv_usec = (long) (timeout * 1000000) % 1000000;
@@ -154,7 +165,39 @@ ret_t run_multiplexed_serv(sock_fd_t serv_sock_fd, double timeout) {
             }
             FD_SET(new_client_sock_fd, &client_set);
 
+            ret_value = (*p_action_on_connect)(
+                new_client_sock_fd, &client_sock_addr, client_sock_addr_size
+                                              );
+
+            if (is_ret_err(ret_value)) {
+                printf("[E] %d on action for connection of client %d\n", ret_value, new_client_sock_fd);
+            }
+
             continue;
+        }
+
+        for (sock_fd_t client_sock_fd = 0; client_sock_fd < FD_SETSIZE; ++client_sock_fd) {
+            if (FD_ISSET(client_sock_fd, &client_set) && (tigger_without_read_ready || FD_ISSET(client_sock_fd, &read_set))) {
+                ret_value = (*p_action)(
+                    client_sock_fd,
+                    FD_ISSET(client_sock_fd, &read_set),
+                    FD_ISSET(client_sock_fd, &write_set),
+                    FD_ISSET(client_sock_fd, &except_set)
+                                       );
+                if (is_ret_err(ret_value)) {
+                    printf("[E] %d on action for client %d\n", ret_value, client_sock_fd);
+                }
+                if (is_ret_custom(ret_value)) {
+                    // Disconnection
+                    FD_CLR(client_sock_fd, &read_set);
+                    FD_CLR(client_sock_fd, &write_set);
+                    FD_CLR(client_sock_fd, &except_set);
+                    ret_value = (*p_action_on_disconnect)(client_sock_fd);
+                    if (is_ret_err(ret_value)) {
+                        printf("[E] %d on action for disconnection of client %d\n", ret_value, client_sock_fd);
+                    }
+                }
+            }
         }
     }
 

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../lib/http_router.h"
+#include "lib/http_router.h"
 
 #define DEMO_SIZE 1024
 
