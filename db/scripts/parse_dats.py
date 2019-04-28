@@ -335,9 +335,16 @@ def main():
                 ("to_edit.json", dict),
                 ("to_discard.json", dict),
             ], ask_confirmation=False) as memory:
-        planes = parse_table(path.join(RESOURCES_ROOT_DIR, "planes.dat"), "Plane", PLANE_PARSING_RULES, *memory)
-        airports = parse_table(path.join(RESOURCES_ROOT_DIR, "airports.dat"), "Airport", AIRPORT_PARSING_RULES, *memory)
-        airlines = parse_table(path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline", AIRLINE_PARSING_RULES, *memory)
+        planes = parse_table(
+            path.join(RESOURCES_ROOT_DIR, "planes.dat"), "Plane",
+            PLANE_PARSING_RULES, *memory)
+        airports = parse_table(
+            path.join(RESOURCES_ROOT_DIR, "airports.dat"), "Airport",
+            AIRPORT_PARSING_RULES, *memory)
+        airlines = parse_table(
+            path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline",
+            AIRLINE_PARSING_RULES, *memory)
+
     with JsonPersistance(PERSISTANCE_ROOT_DIR, [
                 ("unique_choice.json", dict)
             ], ask_confirmation=False) as memory:
@@ -346,19 +353,22 @@ def main():
         # Identification pour Plane : IATA en premier, ICAO en secours
         planes_iata_unique = make_unique(planes, "Plane", "iata", memory)
         planes_iata_to_plane = index_list_by(planes_iata_unique, "iata")
-        _planes_icao_unique = make_unique(planes_iata_unique, "_Plane", "icao", memory)
+        _planes_icao_unique = make_unique(
+            planes_iata_unique, "_Plane", "icao", memory)
         planes_icao_to_plane = index_list_by(_planes_icao_unique, "icao")
 
         # Identification pour Airport : ICAO en premier, IATA en secours
         airports_icao_unique = make_unique(airports, "Airport", "icao", memory)
         airports_icao_to_airport = index_list_by(airports_icao_unique, "icao")
-        _airports_iata_unique = make_unique(airports_icao_unique, "_Airport", "iata", memory)
+        _airports_iata_unique = make_unique(
+            airports_icao_unique, "_Airport", "iata", memory)
         airports_iata_to_airport = index_list_by(_airports_iata_unique, "iata")
 
         # Identification pour Airline : ICAO en premier, IATA en secours
         airlines_icao_unique = make_unique(airlines, "Airline", "icao", memory)
         airlines_icao_to_airline = index_list_by(airlines_icao_unique, "icao")
-        _airlines_iata_unique = make_unique(airlines_icao_unique, "_Airline", "iata", memory)
+        _airlines_iata_unique = make_unique(
+            airlines_icao_unique, "_Airline", "iata", memory)
         airlines_iata_to_airline = index_list_by(_airlines_iata_unique, "iata")
 
 
