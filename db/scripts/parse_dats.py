@@ -143,6 +143,16 @@ def ask_unique_choice(unique_field, rows):
         return 0
 
 
+def get_active_rows(rows):
+    if "is_active" not in rows[0]:
+        return []
+    active_rows = []
+    for row in rows:
+        if row["is_active"]:
+            active_rows.append(row)
+    return active_rows
+
+
 def make_unique(data, context, unique_field, unique_choice_memory):
     unique_field_to_rows = {}
     for row in data:
@@ -166,6 +176,10 @@ def make_unique(data, context, unique_field, unique_choice_memory):
                 if memorized_total_choices_nb == len(rows):
                     result.append(rows[memorized_choice_no])
                     continue
+            active_rows = get_active_rows(rows)
+            if len(active_rows) == 1:
+                result.append(active_rows[0])
+                continue
             # si pas trouvé en mémoire
             choice_no = ask_unique_choice(unique_field, rows)
             memorize_unique_choice(
@@ -175,8 +189,10 @@ def make_unique(data, context, unique_field, unique_choice_memory):
 
     return result
 
+
 def index_list_by(data, field):
     return {row[field]: row for row in data}
+
 
 # +---------------------------------------------------------------------------+
 # |                              Airport parsers                              |
