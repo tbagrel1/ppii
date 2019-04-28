@@ -224,7 +224,7 @@ AIRPORT_PARSING_RULES = lambda *memory: [
     {"parser": daylight_saving_group, "name": "daylight_saving_group", "opt": True},
     {"parser": tz_name, "name": "tz_name", "opt": True},
     {"parser": airport_type, "name": "type", "opt": True},
-    {"parser": drop, "name": "source", "opt": "True"}
+    {"parser": drop, "name": "source", "opt": True}
 ]
 
 # +---------------------------------------------------------------------------+
