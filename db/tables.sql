@@ -10,17 +10,17 @@ CREATE TABLE Airport (
     utc_offset NUMBER(8, 4),
     daylight_saving_group CHAR(1),
     tz_name NVARCHAR2(32),
-    type CHAR(16),
-    data_source CHAR(16),
+    type NVARCHAR2(32),
+    data_source NVARCHAR2(32),
     PRIMARY KEY (icao)
 )
 
 CREATE TABLE Path (
     id NUMBER(16) NOT NULL,
-    real_step_nb NUMBER(4) NOT NULL,
+    real_step_nb NUMBER(4),
     db_step_nb NUMBER(4) NOT NULL,
-    straight_distance BINARY_DOUBLE NOT NULL,
     real_distance BINARY_DOUBLE,
+    straight_distance BINARY_DOUBLE NOT NULL,
     PRIMARY KEY (id)
 )
 
@@ -28,7 +28,7 @@ CREATE TABLE AirportPath (
     path_id NUMBER(16) NOT NULL,
     airport_icao CHAR(4) NOT NULL,
     step_no NUMBER(4) NOT NULL,
-    PRIMARY KEY (path_id, airport_icao, step_no),
+    PRIMARY KEY (path_id, airport_icao),
     FOREIGN KEY (path_id) REFERENCES Path(id),
     FOREIGN KEY (airport_icao) REFERENCES Airport(icao)
 )
@@ -51,13 +51,13 @@ CREATE TABLE Plane (
     speed BINARY_DOUBLE,
     capacity NUMBER(8),
     co2_emission BINARY_DOUBLE,
-    PRIMARY_KEY (iata)
+    PRIMARY KEY (iata)
 )
 
 CREATE TABLE Fleet (
     id NUMBER(16) NOT NULL,
     plane_nb NUMBER(8),
-    PRIMARY_KEY (id)
+    PRIMARY KEY (id)
 )
 
 CREATE TABLE PlaneFleet (
