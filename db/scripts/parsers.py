@@ -76,10 +76,10 @@ def is_memorized(to_, context, field, text):
 
 def ask_user_about(context, field, text, to_keep, to_edit, to_discard):
     """
-    Demande à l'utilisateur que faire à propos d'une valeur detectée comme
+    Demande à l'utilisateur que faire à propos d'une valeur détectée comme
     étrange (garder intact, modifier, invalider).
     Retourne la valeur finale correspondant au choix de l'utilisateur, et
-    enregistre ce choix si la valeur réapparait dans le même contexte
+    enregistre ce choix si la valeur réapparaît dans le même contexte
 
     :param field: nom du champ dont la valeur est soumise à un contrôle de
                   l'utilisateur
