@@ -17,6 +17,15 @@ import re
 import string
 
 
+AIRPORT_IATA_REC = re.compile(r"^[A-Z0-9]{3}$")
+AIRPORT_ICAO_REC = re.compile(r"^[A-Z0-9]{4}$")
+
+AIRLINE_IATA_REC = re.compile(r"^[A-Z0-9]{2}$")
+AIRLINE_ICAO_REC = re.compile(r"^[A-Z0-9]{3}$")
+
+PLANE_IATA_REC = re.compile(r"^[A-Z0-9]{3}$")
+PLANE_ICAO_REC = re.compile(r"^[A-Z0-9]{4}$")
+
 TZ_OLSON_NAME_REC = re.compile(r"^[-A-Za-z_]{1,14}/[-A-Za-z_]{1,14}$")
 
 FT_TO_M = 0.3048
@@ -337,6 +346,40 @@ def yes_no(text):
         return False
     return None
 
+
+# +---------------------------------------------------------------------------+
+
+airport_icao = code_builder(AIRPORT_ICAO_REC)
+
+airport_iata = code_builder(AIRPORT_IATA_REC)
+
+
+def airport_type(text):
+    text = text.strip().lower()
+    if text in ["airport", "station", "port"]:
+        return text
+    return None
+
+
+def airport_data_source(text):
+    text = text.strip()
+    if text in ["OurAirports", "Legacy", "User"]:
+        return text
+    return None
+
+
+# +---------------------------------------------------------------------------+
+
+airline_iata = code_builder(AIRLINE_IATA_REC)
+
+airline_icao = code_builder(AIRLINE_ICAO_REC)
+
+
+# +---------------------------------------------------------------------------+
+
+plane_iata = code_builder(PLANE_IATA_REC)
+
+plane_icao = code_builder(PLANE_ICAO_REC)
 
 def main():
     """En cas de lancement standalone, on ne fait rien."""
