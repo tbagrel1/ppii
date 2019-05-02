@@ -73,6 +73,13 @@ PLANE_PARSING_RULES = lambda *memory: [
 
 
 # +---------------------------------------------------------------------------+
+# |                               Route parsing                               |
+# +---------------------------------------------------------------------------+
+
+ROUTE_PARSING_RULES = lambda iata_to_plane, icao_to_plane, icao_to_airport, iata_to_airport, icao_to_airline, iata_to_airline: [
+]
+
+# +---------------------------------------------------------------------------+
 
 def parse_table(input_path, table_name, table_parsing_rules_func, *memory):
     print("======== {} ========\n".format(table_name))
@@ -121,6 +128,18 @@ def parse_table(input_path, table_name, table_parsing_rules_func, *memory):
         valid_rows, len(data), valid_rows * 100 / len(data)))
 
     return output_data
+
+
+def get_primary_key_builder(default_index, default_map, fallback_map):
+
+    def get_primary_key(text):
+        text = text.strip()
+        if text in default_map:
+            return text
+        if text in fallback_map:
+            return fallback_map[text][default_index]
+
+        return None
 
 
 def index_table_by(
