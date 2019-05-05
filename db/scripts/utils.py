@@ -171,8 +171,28 @@ def make_unique(data, context, unique_field, unique_choice_memory):
     return result
 
 
+def compose(*funcs):
+
+    def composition(*args, **kwargs):
+        result = funcs[0](*args, **kwargs)
+        for func in funcs[1:]:
+            result = func(result)
+        return result
+
+    return composition
+
+
 def index_list_by(data, field):
     return {row[field]: row for row in data}
+
+
+def add_new_fields(data, new_fields):
+    for row in data:
+        for new_field, value in new_fields:
+            if callable(value):
+                row[new_field] = value(row)
+            else:
+                row[new_field] = value
 
 
 def color_escapes(color_code):

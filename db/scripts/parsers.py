@@ -26,6 +26,8 @@ AIRLINE_ICAO_REC = re.compile(r"^[A-Z0-9]{3}$")
 PLANE_IATA_REC = re.compile(r"^[A-Z0-9]{3}$")
 PLANE_ICAO_REC = re.compile(r"^[A-Z0-9]{4}$")
 
+FLIGHT_NO_REC = re.compile(r"^[A-Z0-9]{1,8}$")
+
 TZ_OLSON_NAME_REC = re.compile(r"^[-A-Za-z_]{1,14}/[-A-Za-z_]{1,14}$")
 
 FT_TO_M = 0.3048
@@ -218,6 +220,20 @@ def field_as_is_builder(context, field, to_keep, to_edit, to_discard):
     return field_as_is
 
 
+def get_primary_key_builder(default_index, default_map, fallback_map):
+
+    def get_primary_key(text):
+        text = text.strip()
+        if text in default_map:
+            return text
+        if text in fallback_map:
+            return fallback_map[text][default_index]
+
+        return None
+
+    return get_primary_key
+
+
 def parse_float(text):
     """
     Parser pour un flottant
@@ -230,6 +246,22 @@ def parse_float(text):
     text = text.strip()
     try:
         return float(text)
+    except Exception as _:
+        return None
+
+
+def parse_int(text):
+    """
+    Parser pour un entier
+
+    :param text: le texte à tester/valider
+
+    :return: la valeur numérique correspondante si le texte est valide,
+             None sinon
+    """
+    text = text.strip()
+    try:
+        return int(text)
     except Exception as _:
         return None
 
@@ -347,7 +379,48 @@ def yes_no(text):
     return None
 
 
+def sorted_tuple(parser, separator=" ", strict=False, min=1, max=None):
+    def _sorted_tuple(text):
+        text = text.strip()
+        result = []
+        for elt in text.split(separator):
+            elt = elt.strip()
+            parsed_elt = parser(elt)
+            if parsed_elt is None:
+                if strict:
+                    return None
+            else:
+                result.append(parsed_elt)
+        if (min is not None and len(result) < min) or (max is not None and len(result) > max):
+            return None
+
+        return tuple(sorted(result))
+
+    return _sorted_tuple
+
+
+def ordered_tuple(parser, separator=" ", strict=False, min=1, max=None):
+    def _ordered_tuple(text):
+        text = text.strip()
+        result = []
+        for elt in text.split(separator):
+            elt = elt.strip()
+            parsed_elt = parser(elt)
+            if parsed_elt is None:
+                if strict:
+                    return None
+            else:
+                result.append(parsed_elt)
+        if (min is not None and len(result) < min) or (max is not None and len(result) > max):
+            return None
+
+        return tuple(result)
+
+    return _ordered_tuple
+
+
 # +---------------------------------------------------------------------------+
+
 
 airport_icao = code_builder(AIRPORT_ICAO_REC)
 
@@ -380,6 +453,12 @@ airline_icao = code_builder(AIRLINE_ICAO_REC)
 plane_iata = code_builder(PLANE_IATA_REC)
 
 plane_icao = code_builder(PLANE_ICAO_REC)
+
+
+# +---------------------------------------------------------------------------+
+
+flight_no = code_builder(FLIGHT_NO_REC)
+
 
 def main():
     """En cas de lancement standalone, on ne fait rien."""
