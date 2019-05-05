@@ -4,7 +4,6 @@
 """Fonctions utilitaires pour traiter/nettoyer les bases de données rendues
 disponibles par https://openflights.org/.
 """
-from pprint import pprint
 
 __author__ = "Timothée Adam, Thomas Bagrel"
 __copyright__ = "Copyright 2019, PPII-A1"
@@ -15,31 +14,45 @@ __license__ = "Private"
 import csv
 
 from parsers import *
-from utils import *
+from persistance import *
 
 
 ENC = "utf-8"
+
+WARNING = "W"
+ERROR = "E"
+
+SEVERITY_TO_COLOR = {
+    WARNING: 221,
+    ERROR: 196
+}
 
 
 RESOURCES_ROOT_DIR = "../../resources"
 PERSISTANCE_ROOT_DIR = path.join(RESOURCES_ROOT_DIR, "json_persistance")
 
+
 # +---------------------------------------------------------------------------+
 # |                              Airport parsing                              |
 # +---------------------------------------------------------------------------+
 
-AIRPORT_PARSING_RULES = lambda *memory: [
+AIRPORT_PARSING_RULES = lambda *keep_edit_discard_memory: [
     {"name": "id", "parser": drop, "opt": True},
-    {"name": "name", "parser": field_as_is_builder("airport", "name", *memory), "opt": False},
-    {"name": "city", "parser": field_as_is_builder("airport", "city", *memory), "opt": True},
-    {"name": "country", "parser": field_as_is_builder("airport", "country", *memory), "opt": False},
+    {"name": "name", "parser": field_as_is_builder(
+        "airport", "name", *keep_edit_discard_memory), "opt": False},
+    {"name": "city", "parser": field_as_is_builder(
+        "airport", "city", *keep_edit_discard_memory), "opt": True},
+    {"name": "country", "parser": field_as_is_builder(
+        "airport", "country", *keep_edit_discard_memory), "opt": False},
     {"name": "iata", "parser": airport_iata, "opt": True},
     {"name": "icao", "parser": airport_icao, "opt": False},
     {"name": "lat", "parser": lat, "opt": False},
     {"name": "long", "parser": long, "opt": False},
-    {"name": "altitude", "parser": altitude_with_ft_to_m_conversion, "opt": True},
+    {"name": "altitude", "parser": altitude_with_ft_to_m_conversion,
+     "opt": True},
     {"name": "utc_offset", "parser": utc_offset, "opt": True},
-    {"name": "daylight_saving_group", "parser": daylight_saving_group, "opt": True},
+    {"name": "daylight_saving_group", "parser": daylight_saving_group,
+     "opt": True},
     {"name": "tz_name", "parser": tz_name, "opt": True},
     {"name": "type", "parser": airport_type, "opt": True},
     {"name": "data_source", "parser": airport_data_source, "opt": True}
@@ -50,14 +63,18 @@ AIRPORT_PARSING_RULES = lambda *memory: [
 # |                              Airline parsing                              |
 # +---------------------------------------------------------------------------+
 
-AIRLINE_PARSING_RULES = lambda *memory: [
+AIRLINE_PARSING_RULES = lambda *keep_edit_discard_memory: [
     {"name": "id", "parser": drop, "opt": True},
-    {"name": "name", "parser": field_as_is_builder("airline", "name", *memory), "opt": False},
-    {"name": "alias", "parser": field_as_is_builder("airline", "alias", *memory), "opt": True},
+    {"name": "name", "parser": field_as_is_builder(
+        "airline", "name", *keep_edit_discard_memory), "opt": False},
+    {"name": "alias", "parser": field_as_is_builder(
+        "airline", "alias", *keep_edit_discard_memory), "opt": True},
     {"name": "iata", "parser": airline_iata, "opt": True},
     {"name": "icao", "parser": airline_icao, "opt": False},
-    {"name": "callsign", "parser": field_as_is_builder("airline", "callsign", *memory), "opt": True},
-    {"name": "country", "parser": field_as_is_builder("airline", "country", *memory), "opt": True},
+    {"name": "callsign", "parser": field_as_is_builder(
+        "airline", "callsign", *keep_edit_discard_memory), "opt": True},
+    {"name": "country", "parser": field_as_is_builder(
+        "airline", "country", *keep_edit_discard_memory), "opt": True},
     {"name": "is_active", "parser": yes_no, "opt": True}
 ]
 
@@ -66,8 +83,9 @@ AIRLINE_PARSING_RULES = lambda *memory: [
 # |                               Plane parsing                               |
 # +---------------------------------------------------------------------------+
 
-PLANE_PARSING_RULES = lambda *memory: [
-    {"name": "name", "parser": field_as_is_builder("plane", "name", *memory), "opt": False},
+PLANE_PARSING_RULES = lambda *keep_edit_discard_memory: [
+    {"name": "name", "parser": field_as_is_builder(
+        "plane", "name", *keep_edit_discard_memory), "opt": False},
     {"name": "iata", "parser": plane_iata, "opt": False},
     {"name": "icao", "parser": plane_icao, "opt": True}
 ]
@@ -77,16 +95,24 @@ PLANE_PARSING_RULES = lambda *memory: [
 # |                               Route parsing                               |
 # +---------------------------------------------------------------------------+
 
-ROUTE_PARSING_RULES = lambda iata_to_plane, icao_to_plane, icao_to_airport, iata_to_airport, icao_to_airline, iata_to_airline: [
-    {"name": "airline_icao", "parser": get_primary_key_builder("icao", icao_to_airline, iata_to_airline), "opt": False},
+ROUTE_PARSING_RULES = lambda iata_to_plane, icao_to_plane, \
+                             icao_to_airport, iata_to_airport, \
+                             icao_to_airline, iata_to_airline: [
+    {"name": "airline_icao", "parser": get_default_index_builder(
+        "icao", icao_to_airline, iata_to_airline), "opt": False},
     {"name": "airline_openflights_id", "parser": drop, "opt": True},
-    {"name": "source_airport_icao", "parser": get_primary_key_builder("icao", icao_to_airport, iata_to_airport), "opt": False},
+    {"name": "source_airport_icao", "parser": get_default_index_builder(
+        "icao", icao_to_airport, iata_to_airport), "opt": False},
     {"name": "source_airport_openflights_id", "parser": drop, "opt": True},
-    {"name": "destination_airport_icao", "parser": get_primary_key_builder("icao", icao_to_airport, iata_to_airport), "opt": False},
-    {"name": "destination_airport_openflights_id", "parser": drop, "opt": True},
+    {"name": "destination_airport_icao", "parser": get_default_index_builder(
+        "icao", icao_to_airport, iata_to_airport), "opt": False},
+    {"name": "destination_airport_openflights_id", "parser": drop,
+     "opt": True},
     {"name": "is_codeshare", "parser": yes_no, "opt": True},
-    {"name": "real_step_nb", "parser": compose(parse_int, lambda stop_nb: stop_nb + 2), "opt": True},
-    {"name": "fleet_tuple", "parser": sorted_tuple(plane_iata, separator=" ", strict=False, min=1, max=None), "opt": True}
+    {"name": "real_step_nb", "parser": composed_builder(
+        parse_int, lambda stop_nb: stop_nb + 2), "opt": True},
+    {"name": "fleet_tuple", "parser": sorted_tuple_builder(
+        plane_iata, separator=" ", strict=False, min=1, max=None), "opt": True}
 ]
 
 
@@ -94,34 +120,71 @@ ROUTE_PARSING_RULES = lambda iata_to_plane, icao_to_plane, icao_to_airport, iata
 # |                              Flight parsing                               |
 # +---------------------------------------------------------------------------+
 
-FLIGHT_PARSING_RULES = lambda iata_to_plane, icao_to_plane, icao_to_airport, iata_to_airport, icao_to_airline, iata_to_airline: [
-    {"name": "airline_icao", "parser": get_primary_key_builder("icao", icao_to_airline, iata_to_airline), "opt": False},
+FLIGHT_PARSING_RULES = lambda iata_to_plane, icao_to_plane, \
+                              icao_to_airport, iata_to_airport, \
+                              icao_to_airline, iata_to_airline: [
+    {"name": "airline_icao", "parser": get_default_index_builder(
+        "icao", icao_to_airline, iata_to_airline), "opt": False},
     {"name": "flight_no", "parser": flight_no, "opt": True},
-    {"name": "path_tuple", "parser": ordered_tuple(get_primary_key_builder("icao", icao_to_airport, iata_to_airport), separator="-", strict=True, min=2, max=None), "opt": False}
+    {"name": "path_tuple", "parser": ordered_tuple_builder(
+        get_default_index_builder("icao", icao_to_airport, iata_to_airport),
+        separator="-", strict=True, min=2, max=None), "opt": False}
 ]
 
 # +---------------------------------------------------------------------------+
 
+def color_escapes(color_code):
+    return "\u001b[38;5;{}m".format(color_code), "\u001b[0m"
 
-def parse_table(input_path, table_name, table_parsing_rules_func, *memory):
+
+def display_alert(severity, i_row, row, text):
+    b, e = color_escapes(SEVERITY_TO_COLOR[severity])
+    print("{}[{}] {}: {}\n    {}{}\n".format(b, severity, i_row, row, text, e))
+
+
+def display_alert_field(severity, i_row, row, i_field, field_name):
+    b, e = color_escapes(SEVERITY_TO_COLOR[severity])
+    print("{}[{}] {}: {}\n    on {}: {}{}\n"
+          .format(b, severity, i_row, row, i_field, field_name, e))
+
+
+# +---------------------------------------------------------------------------+
+
+def parse_table(input_path, table_name, parsing_rules_func, *to_inject):
+    """
+    Lit le fichier identifié par input_path, et parse son contenu suivant la
+    table de règles table_parsing_rules_func.
+    :param input_path: chemin vers le fichier à parser
+    :param table_name: nom de la table résultante
+    :param parsing_rules_func: règles de parsing, chacune sous la forme
+                               {"name": ???, "parser": ???, "opt": True/False}
+                               - name est le nom du champ résultant,
+                               - parser est la fonction traitant ce champ,
+                               - opt un booléen indiquant si ce champ est
+                                 optionnel ou non
+    :param to_inject: paramètres à passer à la fonction-liste des règles de
+                      parsage
+    :return: une liste de dictionnaires, chacun correspondant à une ligne du
+             fichier d'entrée
+    """
     print("======== {} ========\n".format(table_name))
 
     with open(input_path, "r", encoding=ENC) as input_file:
         csv_reader = csv.reader(input_file, delimiter=",", quotechar="\"")
         data = [list(row) for row in csv_reader]
 
-    table_parsing_rules = table_parsing_rules_func(*memory)
-    n = len(table_parsing_rules)
+    parsing_rules = parsing_rules_func(*to_inject)
+    n = len(parsing_rules)
 
     output_data = []
     valid_rows = 0
 
     for i_row, row in enumerate(data):
-        if len(row) > len(table_parsing_rules):
+        if len(row) > len(parsing_rules):
             display_alert(
                 WARNING, i_row, row, "len(row): {} > len(parsers): {}"
                                      .format(len(row), n))
-        if len(row) < len(table_parsing_rules):
+        if len(row) < len(parsing_rules):
             display_alert(
                 ERROR, i_row, row, "len(row): {} < len(parsers): {}"
                                    .format(len(row), n))
@@ -131,7 +194,7 @@ def parse_table(input_path, table_name, table_parsing_rules_func, *memory):
         valid = True
 
         for i_field, (field_format, field) in enumerate(
-                zip(table_parsing_rules, row)):
+                zip(parsing_rules, row)):
             if field_format["parser"] == drop:
                 continue
             result = field_format["parser"](field)
@@ -154,6 +217,25 @@ def parse_table(input_path, table_name, table_parsing_rules_func, *memory):
 
 def index_table_by(
         rows, table_name, default_index, fallback_index, unique_choice_memory):
+    """
+    Indexe la table spécifiée selon un index primaire (qui deviendra un
+    identifiant unique de chaque ligne) et un identifiant secondaire (qui peut
+    lui ne pas être unique).
+    :param rows: table à traiter (liste de dictionnaires)
+    :param table_name: nom de la table
+    :param default_index: nom du champ, présent dans chaque ligne de la table,
+                          qui sera utilisé comme index primaire (unique)
+    :param fallback_index: nom du champ qui sera utilisé comme index secondaire
+    :param unique_choice_memory: dictionnaire de persistance utilisé pour se
+                                 souvenir des choix d'unicité réalisés
+    :return: un tuple contenant :
+             - la table (sous forme de liste de dictionnaires), où l'unicité de
+               l'index primaire est assurée
+             - un dictionnaire (de dictionnaires) donnant pour chaque index
+               primaire la ligne associée
+             - un dictionnaire (de dictionnaires) donnant pour chaque index
+               secondaire la ligne associée
+    """
 
     table_with_unique_default_index = make_unique(
         rows, table_name, default_index, unique_choice_memory)
@@ -173,23 +255,54 @@ def index_table_by(
 
 
 def replace_source_destination_by_path(routes):
+    """
+    Modifie en place la table des routes spécifiée afin de remplacer les champs
+    source_airport_icao et destination_airport_icao par un champ path_tuple
+    contenant le tuple (source_airport_icao, destination_airport_icao).
+    :param routes: table route à modifier (en place)
+    :return: rien (None)
+    """
     for route in routes:
-        route["path_tuple"] = (route["source_airport_icao"], route["destination_airport_icao"])
+        route["path_tuple"] = (
+            route["source_airport_icao"],
+            route["destination_airport_icao"]
+        )
 
         del route["source_airport_icao"]
         del route["destination_airport_icao"]
 
 
 def path_length(icao_to_airport, path_tuple):
+    """
+    Calcule la longueur du chemin spécifié, défini par un tuple d'ICAO
+    d'aéroports.
+    :param icao_to_airport: données sur les aéroports, sous forme d'un
+                            dictionnaire ICAO => aéroport
+    :param path_tuple: chemin dont on veut calculer la longueur
+    :return:
+    """
+
     # TODO implémenter le calcul des distances
     return 0.0
 
 
 def extract_paths(exploitations, icao_to_airport):
+    """
+    Modifie en place la table exploitations spécifiée afin de remplacer les
+    champs path_tuple et real_step_nb par le champ path_id, et créé une table
+    paths contenant les informations sur les chemins extraites de la table
+    exploitations.
+    :param exploitations: table exploitations à modifier
+    :param icao_to_airport: données sur les aéroports, sous forme d'un
+                            dictionnaire ICAO => aéroport
+    :return: la nouvelle table paths
+    """
+
     pt_rsn_to_path = {}
     next_path_id = 0
     for exploitation in exploitations:
-        path_tuple, real_step_nb = exploitation["path_tuple"], exploitation["real_step_nb"]
+        path_tuple, real_step_nb = \
+            exploitation["path_tuple"], exploitation["real_step_nb"]
         if (path_tuple, real_step_nb) not in pt_rsn_to_path:
             path_id = next_path_id
             next_path_id += 1
@@ -198,8 +311,11 @@ def extract_paths(exploitations, icao_to_airport):
                 "id": path_id,
                 "real_step_nb": real_step_nb,
                 "db_step_nb": len(path_tuple),
-                "real_distance": None if real_step_nb != len(path_tuple) is None else path_length(icao_to_airport, path_tuple),
-                "straight_distance": path_length(icao_to_airport, (path_tuple[0], path_tuple[:-1])),
+                "real_distance": (
+                    None if real_step_nb != len(path_tuple) is None
+                    else path_length(icao_to_airport, path_tuple)),
+                "straight_distance": path_length(
+                    icao_to_airport, (path_tuple[0], path_tuple[:-1])),
                 "path_tuple": path_tuple
             }
         else:
@@ -212,6 +328,13 @@ def extract_paths(exploitations, icao_to_airport):
 
 
 def extract_airports_paths(paths):
+    """
+    Modifie en place la table paths spécifiée afin de supprimer le champ
+    path_tuple, tout en créant à côté une table airports_paths représentant
+    les étapes de chaque chemin de paths.
+    :param paths: la table paths à modifier
+    :return: la nouvelle table airports_paths
+    """
     airports_paths = []
     for path in paths:
         path_id = path["id"]
@@ -226,6 +349,13 @@ def extract_airports_paths(paths):
 
 
 def extract_fleets(exploitations):
+    """
+    Modifie en place la table exploitations spécifiée afin de remplacer le
+    champ fleet_tuple par le champ fleet_id, et créé une table fleets contenant
+    les informations sur les flottes extraites de la table exploitations.
+    :param exploitations: table exploitations à modifier
+    :return: la nouvelle table fleets
+    """
     ft_to_fleet = {}
     next_fleet_id = 0
     for exploitation in exploitations:
@@ -251,6 +381,13 @@ def extract_fleets(exploitations):
 
 
 def extract_planes_fleets(fleets):
+    """
+    Modifie en place la table fleets spécifiée afin de supprimer le champ
+    fleet_tuple, tout en créant à côté une table planes_fleets représentant
+    les avions de chaque flotte de fleets.
+    :param fleets: la table fleets à modifier
+    :return: la nouvelle table planes_fleets
+    """
     planes_fleets = []
     for fleet in fleets:
         fleet_id = fleet["id"]
@@ -266,66 +403,97 @@ def extract_planes_fleets(fleets):
 def main():
     """Si le module est lancé directement (ie n'est pas un import)."""
 
+    # On commence par parser les tables planes, airports, et airlines car elles
+    # peuvent être parsées individuellement
+
     with JsonPersistance(PERSISTANCE_ROOT_DIR, [
                 ("to_keep.json", dict),
                 ("to_edit.json", dict),
                 ("to_discard.json", dict),
-            ], ask_confirmation=False) as memory:
+            ], ask_confirmation=False) as keep_edit_discard_memory:
+
         planes = parse_table(
             path.join(RESOURCES_ROOT_DIR, "planes.dat"), "Plane",
-            PLANE_PARSING_RULES, *memory)
-        add_new_fields(planes, [("speed", None), ("capacity", None), ("co2_emission", None)])
+            PLANE_PARSING_RULES, *keep_edit_discard_memory)
+        add_new_fields(planes, [
+            ("speed", None),
+            ("capacity", None),
+            ("co2_emission", None)])
 
         airports = parse_table(
             path.join(RESOURCES_ROOT_DIR, "airports.dat"), "Airport",
-            AIRPORT_PARSING_RULES, *memory)
+            AIRPORT_PARSING_RULES, *keep_edit_discard_memory)
+
         airlines = parse_table(
             path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline",
-            AIRLINE_PARSING_RULES, *memory)
+            AIRLINE_PARSING_RULES, *keep_edit_discard_memory)
 
     print("\n-------------------------------------------------\n")
 
+    # On enforce l'unicité des clés primaires de chaque table avec un appel à
+    # index_table_by
+
     with JsonPersistance(PERSISTANCE_ROOT_DIR, [
                 ("unique_choice.json", dict)
-            ], ask_confirmation=False) as memory:
-        memory = memory[0]
+            ], ask_confirmation=False) as persistance:
+        keep_edit_discard_memory = persistance[0]
 
         # Identification pour Plane : IATA en premier, ICAO en secours
         planes, iata_to_plane, icao_to_plane = \
-            index_table_by(planes, "Plane", "iata", "icao", memory)
+            index_table_by(
+                planes, "Plane", "iata", "icao", keep_edit_discard_memory)
 
         # Identification pour Airport : ICAO en premier, IATA en secours
         airports, icao_to_airport, iata_to_airport = \
-            index_table_by(airports, "Airport", "icao", "iata", memory)
+            index_table_by(
+                airports, "Airport", "icao", "iata", keep_edit_discard_memory)
 
         # Identification pour Airline : ICAO en premier, IATA en secours
         airlines, icao_to_airline, iata_to_airline = \
-            index_table_by(airlines, "Airline", "icao", "iata", memory)
+            index_table_by(
+                airlines, "Airline", "icao", "iata", keep_edit_discard_memory)
 
-    maps = (iata_to_plane, icao_to_plane, icao_to_airport, iata_to_airport, icao_to_airline, iata_to_airline)
+    maps = (
+        iata_to_plane, icao_to_plane,
+        icao_to_airport, iata_to_airport,
+        icao_to_airline, iata_to_airline
+    )
 
-    routes = parse_table(path.join(RESOURCES_ROOT_DIR, "routes.dat"), "Route", ROUTE_PARSING_RULES, *maps)
+    print("\n-------------------------------------------------\n")
+
+    # On parse ensuite les tables routes et flights, pour lesquelles on doit
+    # vérifier l'existence des IATAs et ICAOs dans les maps créées avec la
+    # fonction index_table_by
+    # On réajuste également le schéma de ces tables avec
+    # replace_source_destination_by_path et add_new_fields
+
+    routes = parse_table(
+        path.join(RESOURCES_ROOT_DIR, "routes.dat"),
+        "Route", ROUTE_PARSING_RULES, *maps)
     replace_source_destination_by_path(routes)
-    add_new_fields(routes, [("flight_no", None)])
+    add_new_fields(routes, [
+        ("flight_no", None)])
 
-    flights = parse_table(path.join(RESOURCES_ROOT_DIR, "flights.dat"), "Flight", FLIGHT_PARSING_RULES, *maps)
-    add_new_fields(flights, [("fleet_tuple", None), ("real_step_nb", lambda row: len(row["path_tuple"])), ("is_codeshare", None)])
+    flights = parse_table(
+        path.join(RESOURCES_ROOT_DIR, "flights.dat"),
+        "Flight", FLIGHT_PARSING_RULES, *maps)
+    add_new_fields(flights, [
+        ("fleet_tuple", None),
+        ("real_step_nb", lambda row: len(row["path_tuple"])),
+        ("is_codeshare", None)])
 
-    # routes et flights ont la même structure maintenant
+    # Les tables routes et flights ont la même structure maintenant, on peut
+    # les fusionner en la table exploitations
     exploitations = routes + flights
 
+    # On extrait enfin paths, fleets de la table exploitation...
     paths = extract_paths(exploitations, icao_to_airport)
     fleets = extract_fleets(exploitations)
+
+    # ...puis on extrait airports_paths de paths et planes_fleets de fleets
     airports_paths = extract_airports_paths(paths)
     planes_fleets = extract_planes_fleets(fleets)
 
-    print("\n\n")
-    for elt in [planes, airports, airlines, exploitations, paths, airports_paths, fleets, planes_fleets]:
-        pprint(elt[:10])
-        print("\n{} ready to insert\n{}\n".format(len(elt), "-" * 79))
-
-    # TODO: s'assurer qu'un aéroport n'est pas présent 2 fois dans un path
-    # TODO: s'assurer qu'un avion n'est pas présent 2 fois dans un fleet
     # Done !
 
 
