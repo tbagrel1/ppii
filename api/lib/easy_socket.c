@@ -2,6 +2,10 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <signal.h>
+#include <errno.h>
 
 #include "easy_socket.h"
 
@@ -128,11 +132,21 @@ void _reset_sets(sock_fd_t serv_sock_fd, const fd_set *p_client_set,
     FD_CLR(serv_sock_fd, p_except_set);
 }
 
+volatile static bool _should_stop = false;
+
+void stop_server_handler(int sig) {
+    if (sig == SIGINT || sig == SIGTERM) {
+        _should_stop = true;
+    }
+}
+
+
 ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
                                action_on_connect_fp p_action_on_connect,
                                action_on_client_fp p_action,
                                action_on_disconnect_fp p_action_on_disconnect,
-                               bool tigger_without_read_ready) {
+                               bool trigger_without_read_ready) {
+
     fd_set client_set, read_set, write_set, except_set;
     FD_ZERO(&client_set);
     Timeval timeval_timeout;
@@ -143,7 +157,12 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
     sock_addr_size_t client_sock_addr_size;
     ret_t ret_value;
 
-    for (;;) {
+    signal(SIGINT, stop_server_handler);
+    signal(SIGTERM, stop_server_handler);
+
+    _should_stop = false;
+
+    while (!_should_stop) {
         _reset_sets(serv_sock_fd, &client_set, &read_set, &write_set, &except_set);
         timeval_timeout.tv_sec = (long) (timeout);
         timeval_timeout.tv_usec = (long) (timeout * 1000000) % 1000000;
@@ -151,6 +170,9 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
         ready_sock_fd_nb =
             select(FD_SETSIZE, &read_set, &write_set, &except_set, &timeval_timeout);
         if (ready_sock_fd_nb == -1) {
+            if (_should_stop) {
+                break;
+            }
             return RET_ERRNO_ERR;
         };
         if (ready_sock_fd_nb == 0) {
@@ -166,8 +188,7 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
             FD_SET(new_client_sock_fd, &client_set);
 
             ret_value = (*p_action_on_connect)(
-                new_client_sock_fd, &client_sock_addr, client_sock_addr_size
-                                              );
+                new_client_sock_fd, &client_sock_addr, client_sock_addr_size);
 
             if (is_ret_err(ret_value)) {
                 printf("[E] %d on action for connection of client %d\n", ret_value, new_client_sock_fd);
@@ -177,21 +198,20 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
         }
 
         for (sock_fd_t client_sock_fd = 0; client_sock_fd < FD_SETSIZE; ++client_sock_fd) {
-            if (FD_ISSET(client_sock_fd, &client_set) && (tigger_without_read_ready || FD_ISSET(client_sock_fd, &read_set))) {
+            if (FD_ISSET(client_sock_fd, &client_set) && (trigger_without_read_ready || FD_ISSET(client_sock_fd, &read_set))) {
                 ret_value = (*p_action)(
                     client_sock_fd,
                     FD_ISSET(client_sock_fd, &read_set),
                     FD_ISSET(client_sock_fd, &write_set),
                     FD_ISSET(client_sock_fd, &except_set)
-                                       );
+                );
                 if (is_ret_err(ret_value)) {
                     printf("[E] %d on action for client %d\n", ret_value, client_sock_fd);
                 }
                 if (is_ret_custom(ret_value)) {
                     // Disconnection
-                    FD_CLR(client_sock_fd, &read_set);
-                    FD_CLR(client_sock_fd, &write_set);
-                    FD_CLR(client_sock_fd, &except_set);
+                    FD_CLR(client_sock_fd, &client_set);
+                    close(client_sock_fd);
                     ret_value = (*p_action_on_disconnect)(client_sock_fd);
                     if (is_ret_err(ret_value)) {
                         printf("[E] %d on action for disconnection of client %d\n", ret_value, client_sock_fd);
@@ -200,6 +220,11 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
             }
         }
     }
+
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+
+    printf("\n--- Exiting the multiplexed TCP server\n");
 
     return RET_OK;
 }
