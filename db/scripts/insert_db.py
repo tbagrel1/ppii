@@ -11,6 +11,9 @@ __credits__ = ["Thimothée Adam", "Thomas Bagrel"]
 __license__ = "Private"
 
 
+import cx_Oracle
+
+
 def main():
     pass
 

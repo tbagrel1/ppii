@@ -456,7 +456,7 @@ def get_final_tables():
 
     print_box("Parsing of Plane, Airport and Airline")
 
-    with JsonPersistance(PERSISTANCE_ROOT_DIR, [
+    with JsonPersistence(PERSISTANCE_ROOT_DIR, [
                 ("to_keep.json", dict),
                 ("to_edit.json", dict),
                 ("to_discard.json", dict),
@@ -485,7 +485,7 @@ def get_final_tables():
     # On enforce l'unicité des clés primaires de chaque table avec un appel à
     # index_table_by
 
-    with JsonPersistance(PERSISTANCE_ROOT_DIR, [
+    with JsonPersistence(PERSISTANCE_ROOT_DIR, [
                 ("unique_choice.json", dict)
             ], ask_confirmation=False) as persistance:
         keep_edit_discard_memory = persistance[0]
