@@ -16,8 +16,8 @@ CREATE TABLE Airport (
 );
 
 CREATE TABLE Airline (
-    icao CHAR(4) NOT NULL,
-    iata CHAR(3),
+    icao CHAR(3) NOT NULL,
+    iata CHAR(2),
     name NVARCHAR2(128) NOT NULL,
     alias NVARCHAR2(128),
     callsign NVARCHAR2(128),
@@ -69,7 +69,7 @@ CREATE TABLE PlaneFleet (
 );
 
 CREATE TABLE Exploitation,
-    airline_icao CHAR(4) NOT NULL,
+    airline_icao CHAR(3) NOT NULL,
     fleet_id NUMBER(8) NOT NULL,
     path_id NUMBER(8) NOT NULL,
     flight_no CHAR(8),
