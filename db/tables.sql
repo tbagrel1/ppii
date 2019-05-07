@@ -27,8 +27,8 @@ CREATE TABLE Airline (
 );
 
 CREATE TABLE Plane (
-    plane_iaco CHAR(4),
-    plane_iata CHAR(3) NOT NULL,
+    icao CHAR(4),
+    iata CHAR(3) NOT NULL,
     name NVARCHAR2(128) NOT NULL,
     speed BINARY_DOUBLE,
     capacity NUMBER(8),
