@@ -57,7 +57,7 @@ def should_save(path_):
     return _should_("save to", path_)
 
 
-class JsonPersistance:
+class JsonPersistence:
     """
     Context-manager permettant d'utiliser des données persistantes, chargées
     puis sauvées dans des fichiers JSON.
