@@ -13,7 +13,7 @@ CREATE TABLE Airport (
     type NVARCHAR2(32),
     data_source NVARCHAR2(32),
     PRIMARY KEY (icao)
-)
+);
 
 CREATE TABLE Airline (
     icao CHAR(4) NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE Airline (
     country NVARCHAR2(128),
     is_active NUMBER(1),
     PRIMARY KEY (icao)
-)
+);
 
 CREATE TABLE Plane (
     plane_iaco CHAR(4),
@@ -43,7 +43,7 @@ CREATE TABLE Path (
     real_distance BINARY_DOUBLE,
     straight_distance BINARY_DOUBLE NOT NULL,
     PRIMARY KEY (id)
-)
+);
 
 CREATE TABLE AirportPath (
     path_id NUMBER(8) NOT NULL,
@@ -52,13 +52,13 @@ CREATE TABLE AirportPath (
     PRIMARY KEY (path_id, airport_icao),
     FOREIGN KEY (path_id) REFERENCES Path(id),
     FOREIGN KEY (airport_icao) REFERENCES Airport(icao)
-)
+);
 
 CREATE TABLE Fleet (
     id NUMBER(8) NOT NULL,
     plane_nb NUMBER(8),
     PRIMARY KEY (id)
-)
+);
 
 CREATE TABLE PlaneFleet (
     fleet_id NUMBER(8) NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE PlaneFleet (
     PRIMARY KEY (fleet_id, plane_iata),
     FOREIGN KEY (fleet_id) REFERENCES Fleet(id),
     FOREIGN KEY (plane_iata) REFERENCES Plane(iata)
-)
+);
 
 CREATE TABLE Exploitation,
     airline_icao CHAR(4) NOT NULL,
@@ -78,4 +78,4 @@ CREATE TABLE Exploitation,
     FOREIGN KEY (airline_icao) REFERENCES Airline(icao),
     FOREIGN KEY (fleet_id) REFERENCES Fleet(id),
     FOREIGN KEY (path_id) REFERENCES Path(id)
-)
+);
