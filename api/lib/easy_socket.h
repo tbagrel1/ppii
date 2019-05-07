@@ -46,6 +46,6 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
                                action_on_connect_fp p_action_on_connect,
                                action_on_client_fp p_action,
                                action_on_disconnect_fp p_action_on_disconnect,
-                               bool tigger_without_read_ready);
+                               bool trigger_without_read_ready);
 
 #endif  // DEF_EASY_SOCKET
