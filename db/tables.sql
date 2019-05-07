@@ -15,24 +15,6 @@ CREATE TABLE Airport (
     PRIMARY KEY (icao)
 )
 
-CREATE TABLE Path (
-    id NUMBER(8) NOT NULL,
-    real_step_nb NUMBER(8),
-    db_step_nb NUMBER(8) NOT NULL,
-    real_distance BINARY_DOUBLE,
-    straight_distance BINARY_DOUBLE NOT NULL,
-    PRIMARY KEY (id)
-)
-
-CREATE TABLE AirportPath (
-    path_id NUMBER(8) NOT NULL,
-    airport_icao CHAR(4) NOT NULL,
-    step_no NUMBER(8) NOT NULL,
-    PRIMARY KEY (path_id, airport_icao),
-    FOREIGN KEY (path_id) REFERENCES Path(id),
-    FOREIGN KEY (airport_icao) REFERENCES Airport(icao)
-)
-
 CREATE TABLE Airline (
     icao CHAR(4) NOT NULL,
     iata CHAR(3),
@@ -52,6 +34,24 @@ CREATE TABLE Plane (
     capacity NUMBER(8),
     co2_emission BINARY_DOUBLE,
     PRIMARY KEY (iata)
+)
+
+CREATE TABLE Path (
+    id NUMBER(8) NOT NULL,
+    real_step_nb NUMBER(8),
+    db_step_nb NUMBER(8) NOT NULL,
+    real_distance BINARY_DOUBLE,
+    straight_distance BINARY_DOUBLE NOT NULL,
+    PRIMARY KEY (id)
+)
+
+CREATE TABLE AirportPath (
+    path_id NUMBER(8) NOT NULL,
+    airport_icao CHAR(4) NOT NULL,
+    step_no NUMBER(8) NOT NULL,
+    PRIMARY KEY (path_id, airport_icao),
+    FOREIGN KEY (path_id) REFERENCES Path(id),
+    FOREIGN KEY (airport_icao) REFERENCES Airport(icao)
 )
 
 CREATE TABLE Fleet (
