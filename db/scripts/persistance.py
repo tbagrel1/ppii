@@ -90,12 +90,14 @@ class JsonPersistance:
                     raise Exception("Should create instead")
                 with open(path_, "r", encoding=ENC) as file:
                     content = json.load(file)
-                print("    --- LOADED FROM {}".format(path_))
+                print("    [JsonPersistence] --- loaded from \"{}\""
+                      .format(path_))
             except Exception as _:
                 content = type_()
-                print("    --- CREATED ({})".format(path_))
+                print("    [JsonPersistence] --- created    (\"{}\")"
+                      .format(path_))
             self.contents.append(content)
-        print("\n")
+        print()
 
         return self.contents
 
@@ -108,7 +110,7 @@ class JsonPersistance:
         :param traceback: <ne concerne pas l'utilisateur>
         :return: rien (None)
         """
-        print("\n")
+        print()
         for ((name, type_), content) in zip(self.names_types, self.contents):
             path_ = path.join(self.root_dir, name)
             try:
@@ -116,9 +118,12 @@ class JsonPersistance:
                     raise Exception("Should not save")
                 with open(path_, "w", encoding=ENC) as file:
                     json.dump(content, file, indent=2, sort_keys=True)
-                print("    --- SAVED TO {}".format(path_))
+                print("    [JsonPersistence] --- saved to    \"{}\""
+                      .format(path_))
             except Exception as _:
-                print("    --- NOT SAVED ({})".format(path_))
+                print("    [JsonPersistence] --- not saved  (\"{}\")"
+                      .format(path_))
+        print()
 
 
 def main():

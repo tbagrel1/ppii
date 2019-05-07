@@ -12,10 +12,15 @@ __license__ = "Private"
 
 
 import csv
+import sys
+
+from pprint import pprint
 
 from parsers import *
 from persistance import *
 
+
+QUIET = __name__ != "__main__" or len(sys.argv) > 1
 
 ENC = "utf-8"
 
@@ -24,9 +29,12 @@ ERROR = "E"
 
 SEVERITY_TO_COLOR = {
     WARNING: 221,
-    ERROR: 196
+    ERROR: 204
 }
 
+BOX_COLOR = 208
+HEADLINE_COLOR = 222
+IMPORTANT_COLOR = 220
 
 RESOURCES_ROOT_DIR = "../../resources"
 PERSISTANCE_ROOT_DIR = path.join(RESOURCES_ROOT_DIR, "json_persistance")
@@ -112,7 +120,8 @@ ROUTE_PARSING_RULES = lambda iata_to_plane, icao_to_plane, \
     {"name": "real_step_nb", "parser": composed_builder(
         parse_int, lambda stop_nb: stop_nb + 2), "opt": True},
     {"name": "fleet_tuple", "parser": sorted_tuple_builder(
-        plane_iata, separator=" ", strict=False, min=1, max=None), "opt": True}
+        get_default_index_builder("iata", iata_to_plane, icao_to_plane),
+        separator=" ", strict=False, min=1, max=None), "opt": True}
 ]
 
 
@@ -131,18 +140,49 @@ FLIGHT_PARSING_RULES = lambda iata_to_plane, icao_to_plane, \
         separator="-", strict=True, min=2, max=None), "opt": False}
 ]
 
+
 # +---------------------------------------------------------------------------+
+
+def print_box(text, columns=80, add_new_line=True):
+    f = columns - len(text) - 4
+    l = f // 2
+    r = f - l
+    b, e = color_escapes(BOX_COLOR)
+    sys.stdout.write(b)
+    print("+{}+".format("-" * (columns - 2)))
+    print("| {}{}{} |".format(" " * l, text, " " * r))
+    print("+{}+".format("-" * (columns - 2)))
+    sys.stdout.write(e)
+    if add_new_line:
+        print()
+
+
+def print_headline(text, columns=80, add_new_line=True):
+    f = columns - len(text) - 2
+    l = f // 2
+    r = f - l
+    b, e = color_escapes(HEADLINE_COLOR)
+    sys.stdout.write(b)
+    print("{} {} {}".format("=" * l, text, "=" * r))
+    sys.stdout.write(e)
+    if add_new_line:
+        print()
+
 
 def color_escapes(color_code):
     return "\u001b[38;5;{}m".format(color_code), "\u001b[0m"
 
 
 def display_alert(severity, i_row, row, text):
+    if QUIET:
+        return
     b, e = color_escapes(SEVERITY_TO_COLOR[severity])
     print("{}[{}] {}: {}\n    {}{}\n".format(b, severity, i_row, row, text, e))
 
 
 def display_alert_field(severity, i_row, row, i_field, field_name):
+    if QUIET:
+        return
     b, e = color_escapes(SEVERITY_TO_COLOR[severity])
     print("{}[{}] {}: {}\n    on {}: {}{}\n"
           .format(b, severity, i_row, row, i_field, field_name, e))
@@ -167,7 +207,7 @@ def parse_table(input_path, table_name, parsing_rules_func, *to_inject):
     :return: une liste de dictionnaires, chacun correspondant à une ligne du
              fichier d'entrée
     """
-    print("======== {} ========\n".format(table_name))
+    print_headline(table_name)
 
     with open(input_path, "r", encoding=ENC) as input_file:
         csv_reader = csv.reader(input_file, delimiter=",", quotechar="\"")
@@ -209,8 +249,9 @@ def parse_table(input_path, table_name, parsing_rules_func, *to_inject):
             output_data.append(output_row)
             valid_rows += 1
 
-    print("\n--- Valid rows: {} / {} ({:.2f} %)\n\n".format(
-        valid_rows, len(data), valid_rows * 100 / len(data)))
+    b, e = color_escapes(IMPORTANT_COLOR)
+    print("\n{}|> Valid rows: {} / {} ({:.2f} %){}".format(
+        b, valid_rows, len(data), valid_rows * 100 / len(data), e))
 
     return output_data
 
@@ -400,11 +441,20 @@ def extract_planes_fleets(fleets):
     return planes_fleets
 
 
-def main():
-    """Si le module est lancé directement (ie n'est pas un import)."""
+def print_summary(tables, max_displayed=10):
+    for name, table in tables.items():
+        print_headline("{} [{}]".format(name, len(table)))
+        n = min(max_displayed, len(table))
+        for row in table[:n]:
+            pprint(row)
+            print()
 
+
+def get_final_tables():
     # On commence par parser les tables planes, airports, et airlines car elles
     # peuvent être parsées individuellement
+
+    print_box("Parsing of Plane, Airport and Airline")
 
     with JsonPersistance(PERSISTANCE_ROOT_DIR, [
                 ("to_keep.json", dict),
@@ -419,16 +469,18 @@ def main():
             ("speed", None),
             ("capacity", None),
             ("co2_emission", None)])
+        print("\n")
 
         airports = parse_table(
             path.join(RESOURCES_ROOT_DIR, "airports.dat"), "Airport",
             AIRPORT_PARSING_RULES, *keep_edit_discard_memory)
+        print("\n")
 
         airlines = parse_table(
             path.join(RESOURCES_ROOT_DIR, "airlines.dat"), "Airline",
             AIRLINE_PARSING_RULES, *keep_edit_discard_memory)
 
-    print("\n-------------------------------------------------\n")
+    print_box("Indexing of Plane, Airport and Airline (unicity)")
 
     # On enforce l'unicité des clés primaires de chaque table avec un appel à
     # index_table_by
@@ -459,7 +511,7 @@ def main():
         icao_to_airline, iata_to_airline
     )
 
-    print("\n-------------------------------------------------\n")
+    print_box("Parsing of Route and Flight")
 
     # On parse ensuite les tables routes et flights, pour lesquelles on doit
     # vérifier l'existence des IATAs et ICAOs dans les maps créées avec la
@@ -473,6 +525,7 @@ def main():
     replace_source_destination_by_path(routes)
     add_new_fields(routes, [
         ("flight_no", None)])
+    print("\n")
 
     flights = parse_table(
         path.join(RESOURCES_ROOT_DIR, "flights.dat"),
@@ -496,6 +549,24 @@ def main():
 
     # Done !
 
+    tables = {
+        "Airport": airports,
+        "Airline": airlines,
+        "Plane": planes,
+        "Exploitation": exploitations,
+        "Path": paths,
+        "AirportPath": airports_paths,
+        "Fleet": fleets,
+        "PlaneFleet": planes_fleets
+    }
+
+    print()
+    print_box("Summary")
+    print_summary(tables, max_displayed=2)
+
+    return tables
+
 
 if __name__ == "__main__":
-    main()
+    get_final_tables()
+
