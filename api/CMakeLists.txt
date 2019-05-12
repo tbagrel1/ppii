@@ -15,3 +15,9 @@ add_executable(tcp
         lib/easy_socket.c lib/easy_socket.h
         lib/ret.c lib/ret.h
         lib/http_status.c lib/http_status.h)
+
+add_executable(udp
+        udp.c
+        lib/easy_socket.c lib/easy_socket.h
+        lib/ret.c lib/ret.h
+        lib/http_status.c lib/http_status.h)

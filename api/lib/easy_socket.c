@@ -95,6 +95,18 @@ ret_t open_sock_inet_tcp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
     return RET_OK;
 }
 
+ret_t open_sock_inet_udp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
+    *p_sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (*p_sock_fd == -1) {
+        return RET_ERRNO_ERR;
+    }
+    if (bind(*p_sock_fd, (SockAddr *) (p_sock_addr_inet), SOCK_ADDR_INET_LEN) == -1) {
+        return RET_ERRNO_ERR;
+    }
+
+    return RET_OK;
+}
+
 /**
  * Crée/ouvre un socket internet TCP (SOCK_STREAM), et exécute listen pour en faire un socket serveur acceptant des connexions clients
  * @param p_sock_fd pointeur vers la variable dans laquelle placer le descripteur de socket résultat
@@ -137,14 +149,59 @@ volatile static bool _should_stop = false;
 void stop_server_handler(int sig) {
     if (sig == SIGINT || sig == SIGTERM) {
         _should_stop = true;
+        printf("\n--- SIG%s --> stopping server\n", sig == SIGINT ? "SIGINT" : "SIGTERM");
     }
 }
 
+ret_t run_udp_serv(sock_fd_t serv_sock_fd, size_t buffer_size, action_udp_fp p_action) {
+    signal(SIGINT, stop_server_handler);
+    signal(SIGTERM, stop_server_handler);
+
+    _should_stop = false;
+
+    char *buffer = malloc(buffer_size * sizeof(char));
+    ssize_t _data_size;
+    SockAddr client_sock_addr;
+    sock_addr_size_t client_sock_addr_size;
+    ret_t ret_value;
+
+    while (!_should_stop) {
+        _data_size = recvfrom(serv_sock_fd, buffer, buffer_size, NO_FLAGS, &client_sock_addr, &client_sock_addr_size);
+/*        if (_data_size == -1) {
+            if (_should_stop) {
+                break;
+            } else {
+                return RET_ERRNO_ERR;
+            }
+        }
+        if (_data_size == 0) {
+            if (_should_stop) {
+                break;
+            } else {
+                continue;
+            }
+        }*/
+
+        ret_value = (*p_action)(serv_sock_fd, &client_sock_addr, client_sock_addr_size, buffer, (size_t) (_data_size), (size_t) (_data_size) == buffer_size);
+        if (is_ret_err(ret_value)) {
+            printf("[E] %d on action for client %s\n", ret_value, IPSTR(&client_sock_addr));
+        }
+    }
+
+    http://www.justskins.com/forums/signals-and-recvfrom-behavior-128345.html
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+
+    free(buffer);
+    printf("--- Exiting the UDP server\n");
+
+    return RET_OK;
+}
 
 ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
-                               action_on_connect_fp p_action_on_connect,
-                               action_on_client_fp p_action,
-                               action_on_disconnect_fp p_action_on_disconnect,
+                               action_tcp_on_connect_fp p_action_on_connect,
+                               action_tcp_fp p_action,
+                               action_tcp_on_disconnect_fp p_action_on_disconnect,
                                bool trigger_without_read_ready) {
 
     fd_set client_set, read_set, write_set, except_set;
@@ -172,10 +229,11 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
         if (ready_sock_fd_nb == -1) {
             if (_should_stop) {
                 break;
+            } else {
+                return RET_ERRNO_ERR;
             }
-            return RET_ERRNO_ERR;
         };
-        if (ready_sock_fd_nb == 0) {
+        if (ready_sock_fd_nb == 0 && !trigger_without_read_ready) {
             continue;
         }
 
@@ -191,7 +249,7 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
                 new_client_sock_fd, &client_sock_addr, client_sock_addr_size);
 
             if (is_ret_err(ret_value)) {
-                printf("[E] %d on action for connection of client %d\n", ret_value, new_client_sock_fd);
+                printf("[E] %d on action for connection of client #%d\n", ret_value, new_client_sock_fd);
             }
 
             continue;
@@ -206,7 +264,7 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
                     FD_ISSET(client_sock_fd, &except_set)
                 );
                 if (is_ret_err(ret_value)) {
-                    printf("[E] %d on action for client %d\n", ret_value, client_sock_fd);
+                    printf("[E] %d on action for client #%d\n", ret_value, client_sock_fd);
                 }
                 if (is_ret_custom(ret_value)) {
                     // Disconnection
@@ -214,7 +272,7 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
                     close(client_sock_fd);
                     ret_value = (*p_action_on_disconnect)(client_sock_fd);
                     if (is_ret_err(ret_value)) {
-                        printf("[E] %d on action for disconnection of client %d\n", ret_value, client_sock_fd);
+                        printf("[E] %d on action for disconnection of client #%d\n", ret_value, client_sock_fd);
                     }
                 }
             }
@@ -224,7 +282,7 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
     signal(SIGINT, SIG_DFL);
     signal(SIGTERM, SIG_DFL);
 
-    printf("\n--- Exiting the multiplexed TCP server\n");
+    printf("--- Exiting the multiplexed TCP server\n");
 
     return RET_OK;
 }
