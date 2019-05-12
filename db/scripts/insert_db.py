@@ -91,11 +91,11 @@ CREATE_TABLE_STATEMENTS = [
 )""",
     """CREATE TABLE Exploitation (
     airline_icao CHAR(3) NOT NULL,
-    fleet_id NUMBER(8) NOT NULL,
+    fleet_id NUMBER(8),
     path_id NUMBER(8) NOT NULL,
     flight_no CHAR(8),
     is_codeshare NUMBER(1),
-    PRIMARY KEY (airline_icao, fleet_id, path_id, flight_no),
+    PRIMARY KEY (airline_icao, path_id, flight_no),
     FOREIGN KEY (airline_icao) REFERENCES Airline(icao),
     FOREIGN KEY (fleet_id) REFERENCES Fleet(id),
     FOREIGN KEY (path_id) REFERENCES Path(id)
@@ -115,40 +115,85 @@ DROP_TABLE_STATEMENTS = [
 
 
 INSERT_VALUES_STATEMENTS = [
-    """INSERT INTO Airport (icao, iata, name, city, country, latitude, longitude, altitude, utc_offset, daylight_saving_group, tz_name, type, data_source) VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13)""",
-    """INSERT INTO Airline (icao, iata, name, alias, callsign, country, is_active) VALUES (:1, :2, :3, :4, :5, :6, :7)""",
-    """INSERT INTO Plane (icao, iata, name, speed, capacity, co2_emission) VALUES (:1, :2, :3, :4, :5, :6)""",
-    """INSERT INTO Path (id, real_step_nb, db_step_nb, real_distance, straight_distance) VALUES (:1, :2, :3, :4, :5)""",
-    """INSERT INTO AirportPath (path_id, airport_icao, step_no) VALUES (:1, :2, :3)""",
-    """INSERT INTO Fleet (id, plane_nb) VALUES (:1, :2)""",
-    """INSERT INTO PlaneFleet (fleet_id, plane_iata) VALUES (:1, :2)""",
-    """INSERT INTO Exploitation (airline_icao, fleet_id, path_id, flight_no, is_codeshare) VALUES (:1, :2, :3, :4, :5)"""
+    """INSERT INTO Airport (icao, iata, name, city, country, latitude, longitude, altitude, utc_offset, daylight_saving_group, tz_name, type, data_source) VALUES (:icao, :iata, :name, :city, :country, :latitude, :longitude, :altitude, :utc_offset, :daylight_saving_group, :tz_name, :type, :data_source)""",
+    """INSERT INTO Airline (icao, iata, name, alias, callsign, country, is_active) VALUES (:icao, :iata, :name, :alias, :callsign, :country, :is_active)""",
+    """INSERT INTO Plane (icao, iata, name, speed, capacity, co2_emission) VALUES (:icao, :iata, :name, :speed, :capacity, :co2_emission)""",
+    """INSERT INTO Path (id, real_step_nb, db_step_nb, real_distance, straight_distance) VALUES (:id, :real_step_nb, :db_step_nb, :real_distance, :straight_distance)""",
+    """INSERT INTO AirportPath (path_id, airport_icao, step_no) VALUES (:path_id, :airport_icao, :step_no)""",
+    """INSERT INTO Fleet (id, plane_nb) VALUES (:id, :plane_nb)""",
+    """INSERT INTO PlaneFleet (fleet_id, plane_iata) VALUES (:fleet_id, :plane_iata)""",
+    """INSERT INTO Exploitation (airline_icao, fleet_id, path_id, flight_no, is_codeshare) VALUES (:airline_icao, :fleet_id, :path_id, :flight_no, :is_codeshare)"""
 ]
+
+N = cx_Oracle.NUMBER
+B = cx_Oracle.NATIVE_FLOAT
+U = cx_Oracle.NCHAR
 
 INPUT_SIZESS = [
-    (4, 3, 128, 128, 128, cx_Oracle.NATIVE_FLOAT, cx_Oracle.NATIVE_FLOAT, cx_Oracle.NUMBER, cx_Oracle.NUMBER, 1, 32, 32, 32),
-    (3, 2, 128, 128, 128, 128, cx_Oracle.NUMBER),
-    (4, 3, 128, cx_Oracle.NATIVE_FLOAT, cx_Oracle.NUMBER, cx_Oracle.NATIVE_FLOAT),
-    (cx_Oracle.NUMBER, cx_Oracle.NUMBER, cx_Oracle.NUMBER, cx_Oracle.NATIVE_FLOAT, cx_Oracle.NATIVE_FLOAT),
-    (cx_Oracle.NUMBER, 4, cx_Oracle.NUMBER),
-    (cx_Oracle.NUMBER, cx_Oracle.NUMBER),
-    (cx_Oracle.NUMBER, 3),
-    (3, cx_Oracle.NUMBER, cx_Oracle.NUMBER, 8, cx_Oracle.NUMBER)
+    {
+        "icao": 4,
+        "iata": 3,
+        "name": U,
+        "city": U,
+        "country": U,
+        "latitude": B,
+        "longitude": B,
+        "altitude": N,
+        "utc_offset": N,
+        "daylight_saving_group": 1,
+        "tz_name": U,
+        "type": U,
+        "data_source": U
+    },
+    {
+        "icao": 3,
+        "iata": 2,
+        "name": U,
+        "alias": U,
+        "callsign": U,
+        "country": U,
+        "is_active": N
+    },
+    {
+        "icao": 4,
+        "iata": 3,
+        "name": U,
+        "speed": B,
+        "capacity": N,
+        "co2_emission": B
+    },
+    {
+        "id": N,
+        "real_step_nb": N,
+        "db_step_nb": N,
+        "real_distance": B,
+        "straight_distance": B
+    },
+    {
+        "path_id": N,
+        "airport_icao": 4,
+        "step_no": N
+    },
+    {
+        "id": N,
+        "plane_nb": N
+    },
+    {
+        "fleet_id": N,
+        "plane_iata": 3
+    },
+    {
+        "airline_icao": 3,
+        "fleet_id": N,
+        "path_id": N,
+        "flight_no": 8,
+        "is_codeshare": N
+    }
 ]
 
-MAPPERS = {
-    "Airport": lambda d: (d["icao"], d["iata"], d["name"], d["city"], d["country"], d["lat"], d["long"], d["altitude"], d["utc_offset"], d["daylight_saving_group"], d["tz_name"], d["type"], d["data_source"]),
-    "Airline": lambda d: (d["icao"], d["iata"], d["name"], d["alias"], d["callsign"], d["country"], d["is_active"]),
-    "Plane": lambda d: (d["icao"], d["iata"], d["name"], d["speed"], d["capacity"], d["co2_emission"]),
-    "Path": lambda d: (d["id"], d["real_step_nb"], d["db_step_nb"], d["real_distance"], d["straight_distance)"]),
-    "AirportPath": lambda d: (d["path_id"], d["airport_icao"], d["step_no"]),
-    "Fleet": lambda d: (d["id"], d["plane_nb"]),
-    "PlaneFleet": lambda d: (d["fleet_id"], d["plane_iata"]),
-    "Exploitation": lambda d: (d["airline_icao"], d["fleet_id"], d["path_id"], d["flight_no"], d["is_codeshare"])
-}
 
 def main():
-    connection = cx_Oracle.connect(user="grpa1", password="TPOracle", dsn="oracle.telecomnancy.univ-lorraine.fr:1521/TNCY")
+    connection = cx_Oracle.connect(user="grpa1", password="TPOracle", dsn="oracle.telecomnancy.univ-lorraine.fr:1521/TNCY", nencoding="utf-8")
 
     e = None
 
@@ -168,8 +213,9 @@ def main():
         tables = get_final_tables()
 
         for i, (table_name, insert_values_statement, input_sizes) in enumerate(zip(TABLE_NAMES, INSERT_VALUES_STATEMENTS, INPUT_SIZESS)):
-            cursor.setinputsizes(*input_sizes)
-            cursor.executemany(INSERT_VALUES_STATEMENTS, list(map(MAPPERS[table_name], tables[table_name])))
+            cursor.setinputsizes(**input_sizes)
+            cursor.prepare(insert_values_statement)
+            cursor.executemany(None, tables[table_name])
             print("OK {}".format(i))
 
     except Exception as ee:

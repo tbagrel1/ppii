@@ -316,7 +316,7 @@ def drop(text):
     return None
 
 
-def long(text):
+def longitude(text):
     """
     Parser pour la longitude
     :param text: le texte à tester/valider
@@ -328,7 +328,7 @@ def long(text):
     return None
 
 
-def lat(text):
+def latitude(text):
     """
     Parser pour la latitude
     :param text: le texte à tester/valider
@@ -398,9 +398,9 @@ def yes_no(text):
     """
     text = text.strip().lower()
     if text == "y":
-        return True
+        return 1
     if text == "n":
-        return False
+        return 0
     return None
 
 
@@ -660,7 +660,14 @@ plane_icao = code_builder(PLANE_ICAO_REC)
 
 # +---------------------------------------------------------------------------+
 
-flight_no = code_builder(FLIGHT_NO_REC)
+def flight_no(text):
+    text = text.strip().upper()
+    if FLIGHT_NO_REC.search(text) is not None:
+        return text
+    text = translit(text, "ru", reversed=True)
+    if FLIGHT_NO_REC.search(text) is not None:
+        return text
+    return "UNKNOW"
 
 
 def main():
