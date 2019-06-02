@@ -1,0 +1,321 @@
+\documentclass[a4paper, 11pt, twoside]{book}
+\usepackage[style=numeric]{biblatex}
+\usepackage{tbagrelstandard}
+\usepackage{concretefull}
+\usepackage{float}
+
+\DeclareFontShape{T1}{lmss}{sbc}{sc}{<->ssub * lmss/sbc/n}{}
+
+\RequirePackage{color, xcolor}
+\RequirePackage{listings}
+\lstset{
+  basicstyle=\ttfamily\normalsize\color{black!90},
+  stringstyle=\color{black!70},
+  commentstyle=\itshape\color{black!60},
+  identifierstyle=\color{black!90},
+  keywordstyle=\color{black!100}\bfseries,
+  numberstyle=\ttfamily\small\color{black!50},
+  numbers=left,
+  numbersep=10pt,
+  backgroundcolor=\color{black!1},
+  rulecolor=\color{black!30},
+  title=\large\ttfamily\lstname,
+  breakatwhitespace=true,
+  breaklines=false,
+  captionpos=b,
+  frame=single,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  stepnumber=1,
+  tabsize=4,
+  numberblanklines=true,
+  frameround=tttt,
+}
+
+\tabularnewline
+
+\bibliography{bibliography}
+
+\DeclareFieldFormat*{title}{{\itshape #1}}
+\DeclareFieldFormat*{note}{#1}
+% \DeclareFieldFormat*{usera}{\tt{#1}}
+
+% \renewbibmacro*{url}{\hreff{\printfield{url}}{\printfield{usera}}}
+
+\DeclareBibliographyDriver{online}{%
+  \usebibmacro{bibindex}%
+  \usebibmacro{begentry}%
+  \printfield{title}\\%
+  \printfield{note}\quad%
+  {\footnotesize%
+  \usebibmacro{urldate}%
+  }
+}
+
+% \DeclareFieldFormat{url}{}
+% \DeclareFieldFormat{usera}{#1}
+% \AtEveryBibitem{%
+%     \csappto{blx@bbx@\thefield{entrytype}}{% put at end of entry
+%         \iffieldundef{usera}{%
+%           \space \textbf{No annotation!}}{%
+%           \space\printfield{usera}
+%         }
+%     }
+% }
+
+\newcommand{\hreff}[2]{\href{#1}{\tt{#2}}}
+
+\edef\restoreparindent{\parindent=\the\parindent\relax}
+\usepackage{parskip}
+\restoreparindent
+
+\geometry{inner=3cm,outer=2cm,top=2.5cm,bottom=2cm}
+
+\AtBeginDocument{\addtocontents{toc}{\protect\thispagestyle{plain}}}
+%\patchcmd{\chapter}{\thispagestyle{plain}}{}{}{}
+\patchcmd{\bibliography}{\thispagestyle{empty}}{\thispagestyle{plain}}{}{}
+
+\makeatletter
+\def\cleardoublepage{\clearpage\if@twoside \ifodd\c@page\else
+\thispagestyle{empty}%
+\hbox{}\newpage\thispagestyle{empty}\if@twocolumn\hbox{}\newpage\thispagestyle{empty}\fi\fi\fi}
+\renewcommand\part{%
+  \if@openright
+    \cleardoubelpage
+  \else
+    \clearpage
+  \fi
+  \thispagestyle{empty}%
+  \if@twocolumn
+    \onecolumn
+    \@tempswatrue
+  \else
+    \@tempswafalse
+  \fi
+  \null\vfil
+  \secdef\@part\@spart}
+\def\@endpart{\if@twoside
+               \if@openright
+               \fi
+              \fi
+              \if@tempswa
+                \twocolumn
+              \fi}
+
+\def\cleardoubelpage{\clearpage
+ \if@twoside
+  \ifodd\c@page
+   \null\thispagestyle{empty}\newpage\thispagestyle{empty}
+   \if@twocolumn\null\newpage\thispagestyle{empty}\fi
+   \else\fi
+  \fi
+ }%
+ \makeatother
+
+\renewcommand\lstlistlistingname{Table des listings}
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\newcommand{\anglais}[1]{\it{#1}}
+\newcommand{\tech}[1]{\sf{#1}}
+\newcommand{\env}[1]{\sf{#1}}
+\newcommand{\placeholder}[1]{\,$\langle\,\text{\textnormal{#1}}\,\rangle$\,}
+
+\renewcommand{\tn}{TELECOM Nancy}
+\newcommand{\fisa}{\sc{fisa}}
+
+\let\citeoriginal\cite
+\renewcommand{\cite}[1]{\textsuperscript{\citeoriginal{#1}}}
+
+\let\paragraphoriginal\paragraph
+\renewcommand{\paragraph}[1]{\paragraphoriginal{#1}\mbox{}}
+
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\makeindex
+
+\begin{document}
+\frontmatter
+\pagestyle{empty}
+
+%------------------------------------------------------------------------------
+% https://fr.overleaf.com/latex/examples/title-page-with-logo/hrskypjpkrpd
+\begin{titlepage}
+
+\center{}
+
+%------------------------------------------------------------------------------
+% HEADING SECTIONS
+%------------------------------------------------------------------------------
+
+\hspace{0pt}
+\vfill{}
+
+\textsc{\large \tn{}}\\[1.2cm]
+
+%------------------------------------------------------------------------------
+% TITLE SECTION
+%------------------------------------------------------------------------------
+
+\HRule \\[0.4cm]
+{ \huge \bfseries Rapport de projet PPII (FISA)}\\
+\HRule \\[1.5cm]
+
+%------------------------------------------------------------------------------
+% AUTHOR SECTION
+%------------------------------------------------------------------------------
+
+\begin{minipage}{0.38\textwidth}
+\begin{flushleft} \large
+\emph{Auteurs~:}\\
+Thomas~\textsc{Bagrel}
+\end{flushleft}
+\end{minipage}
+\hfill
+\begin{minipage}{0.58\textwidth}
+\begin{flushright}
+\begin{tabular}{lr}
+\mbox{}\\
+Timothée~\textsc{Adam}
+\end{tabular}
+\end{flushright}
+\end{minipage}\\[1.5cm]
+
+%------------------------------------------------------------------------------
+% DATE SECTION
+%------------------------------------------------------------------------------
+
+{\large Année 2018 - 2019}\\[1.2cm]
+
+%------------------------------------------------------------------------------
+% LOGO SECTION
+%------------------------------------------------------------------------------
+
+\includegraphics[height=2.5cm]{resources/logo_tn.jpg}\\[1cm]
+
+\vfill{}
+\end{titlepage}
+\clearpage{}
+
+%------------------------------------------------------------------------------
+
+% page blanche (2ème de couverture)
+~\vfill
+\clearpage{}
+
+%------------------------------------------------------------------------------
+
+\pagestyle{plain}
+\section*{Déclaration sur l'honneur de non-plagiat}
+\addcontentsline{toc}{section}{Déclaration sur l'honneur de non-plagiat}
+
+Nous soussignons Thomas \sc{Bagrel} et Timothée \sc{Adam}, élèves de 1\tss{ère} année \fisa{} à \tn{}, déclarons nous être s sur les différentes formes de plagiat existantes et sur les techniques et normes de citation et référence.
+
+Nous déclarons en outre que le travail rendu est un travail original, issu de notre réflexion personnelle, et qu'il a été rédigé entièrement par nos soins. Nous affirmons n'avoir ni contrefait, ni falsifié, ni copié tout ou partie de l'\oe{}uvre d'autrui, en particulier texte ou code informatique, dans le but de nous l'accaparer.
+
+Nous certifions donc que toutes formulations, idées, recherches, raisonnements, analyses, programmes, schémas ou autre créations, figurant dans le document et empruntés à un tiers, sont clairement signalés comme tels, selon les usages en vigueur.
+
+Nous sommes conscient que le fait de ne pas citer une source ou de ne pas la citer clairement et complètement est constitutif de plagiat, que le plagiat est considéré comme une faute grave au sein de l'Université, et qu'en cas de manquement aux règles en la matière, nous encourrons des poursuites non seulement devant la commission de discipline de l'établissement mais également devant les tribunaux de la République Fran\c{c}aise.
+
+\vfill{}
+
+\hspace{7cm}\begin{minipage}{7cm}
+\bf{Fait à Vand\oe{}uvre-lès-Nancy, le 2 juin 2019}
+
+\vspace{2cm}
+
+\phantom{<signature>}
+\end{minipage}
+\clearpage{}
+
+%------------------------------------------------------------------------------
+
+\section*{Avant-propos}
+\addcontentsline{toc}{section}{Avant-propos}
+
+A faire
+
+\hspace{3cm}
+
+%------------------------------------------------------------------------------
+
+\tableofcontents{}
+\addcontentsline{toc}{section}{Table des matières}
+\newpage\hbox{}\thispagestyle{empty}\cleardoublepage{}
+
+%------------------------------------------------------------------------------
+\mainmatter
+\pagestyle{fancy}
+\fancyhf{}
+
+% \renewcommand*{\chaptermark}[1]{%
+%   \def\delayedchaptermark{%
+%     \bfseries%
+%     \ifnum\value{chapter}>0 %
+%       \chaptername~\thechapter.~%
+%     \fi%
+%     #1%
+%   }
+% }
+\renewcommand*{\chaptermark}[1]{%
+  \markboth{%
+    \bfseries%
+    \ifnum\value{chapter}>0 %
+      \chaptername~\thechapter.~%
+    \fi%
+    #1%
+  }{}
+}
+\renewcommand*{\sectionmark}[1]{%
+  \markright{%
+    \ifnum\value{chapter}>0 \ifnum\value{section}>0 %
+      \thesection.~%
+    \fi\fi
+    #1%
+  }%
+}%
+
+%\lhead[\expandafter\delayedchaptermark]{}
+\lhead[\leftmark]{}
+\chead{}
+\rhead[]{\rightmark}
+
+\lfoot{}
+\cfoot{\thepage}
+\rfoot{}
+
+%-----------------------------------------------------------------------------%------------------------------------------------------------------------------%------------------------------------------------------------------------------
+
+\chapter*{Introduction}
+\chaptermark{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+\addtocontents{toc}{\protect\vspace{-0.3cm}}
+
+A faire
+
+\chapter*{Conclusion}
+\chaptermark{Conclusion}
+\addtocontents{toc}{\protect\bigskip\bigskip}
+\addcontentsline{toc}{chapter}{Conclusion}
+
+A faire
+
+%------------------------------------------------------------------------------%------------------------------------------------------------------------------%------------------------------------------------------------------------------
+
+%\clearpage{}
+
+\printbibliography{}
+\addcontentsline{toc}{section}{Bibliographie}
+
+\vfill
+
+\begin{center}
+\rule{0.9\linewidth}{1pt}\\
+{\small
+  Thomas \sc{Bagrel} --- Timothée \sc{Adam} --- \tn{} --- Année 2018 - 2019
+}
+\end{center}
+
+\end{document}
