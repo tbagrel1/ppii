@@ -36,16 +36,16 @@ int _nothing;
     uint64_t row_nb; \
     uint32_t column_nb; \
     DO_OR_RET(dpiConn_prepareStmt(p_connection, false, query, strlen(query), NULL, 0, &p_statement), 1); \
-    DO_OR_RET(dpiStmt_execute(p_statement, DPI_MODE_EXEC_DEFAULT, &column_nb), 2); \
-    DO_OR_RET(dpiStmt_getRowCount(p_statement, &row_nb), 3);
+    DO_OR_RET(dpiStmt_execute(p_statement, DPI_MODE_EXEC_DEFAULT, &column_nb), 2);
 #define ITER_FETCH \
     int found; \
     uint32_t buffer_row_index; \
-    DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 4); \
+    DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 3); \
     while (found) {
 #define END_QUERY \
-        DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 5); \
+        DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 4); \
     } \
+    DO_OR_RET(dpiStmt_getRowCount(p_statement, &row_nb), 3); \
     dpiStmt_release(p_statement);
 
 typedef struct dpiConn Connection;
@@ -54,6 +54,9 @@ typedef struct dpiCommonCreateParams CommonParams;
 typedef struct dpiErrorInfo ErrorInfo;
 typedef struct dpiVersionInfo VersionInfo;
 typedef struct dpiStmt Statement;
+typedef struct dpiData Data;
+typedef dpiBytes Bytes;
+typedef dpiNativeTypeNum data_type_t;
 
 bool is_connection_ok(Connection *p_connection);
 ret_t get_airport_nb(Connection *p_connection, uint64_t *p_airport_nb);
