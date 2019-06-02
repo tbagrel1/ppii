@@ -12,8 +12,6 @@ __license__ = "Private"
 
 import cx_Oracle
 
-DB_URI = "grpa1/TPOracle@"
-
 TABLE_NAMES = [
     "Airport",
     "Airline",
@@ -217,6 +215,8 @@ def main():
             cursor.prepare(insert_values_statement)
             cursor.executemany(None, tables[table_name])
             print("OK {}".format(i))
+
+        connection.commit()
 
     except Exception as ee:
         e = ee
