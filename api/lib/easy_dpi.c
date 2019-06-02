@@ -13,17 +13,30 @@ bool is_connection_ok(Connection *p_connection) {
 
 
 ret_t get_airport_nb(Connection *p_connection, uint64_t *p_airport_nb) {
-    BEGIN_QUERY(p_connection, "SELECT icao FROM Airport")
+    BEGIN_QUERY(p_connection, "SELECT fleet_id FROM Exploitation")
         Data *p_data;
         data_type_t data_type;
-        Bytes *p_bytes;
-        char icao[5];
     ITER_FETCH
         DO_OR_RET(dpiStmt_getQueryValue(p_statement, 1, &data_type, &p_data), 11);
-        p_bytes = dpiData_getBytes(p_data);
-        strncpy(icao, p_bytes->ptr, 4);
-        icao[4] = '\0';
-        printf("ICAO: %s\n", icao);
+        switch (data_type) {
+            case DPI_NATIVE_TYPE_DOUBLE:
+                printf("double\n");
+                break;
+            case DPI_NATIVE_TYPE_FLOAT:
+                printf("float\n");
+                break;
+            case DPI_NATIVE_TYPE_INT64:
+                printf("int64\n");
+                break;
+            case DPI_NATIVE_TYPE_UINT64:
+                printf("uint64\n");
+                break;
+            case DPI_NATIVE_TYPE_BYTES:
+                printf("bytes\n");
+                break;
+            default:
+                printf("Unknow: %d\n", data_type);
+        }
     END_QUERY
     *p_airport_nb = row_nb;
 

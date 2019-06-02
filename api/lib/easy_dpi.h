@@ -13,7 +13,7 @@
 #define DEFAULT_COMMON_PARAMS NULL  // https://oracle.github.io/odpi/doc/structs/dpiCommonCreateParams.html#dpicommoncreateparams
 #define DEFAULT_CONNECTION_PARAMS NULL  // https://oracle.github.io/odpi/doc/structs/dpiConnCreateParams.html#dpiconncreateparams
 
-int _nothing;
+extern int _nothing;
 
 #define DO_OR_RAISE(func_call, error_message) \
     if ((func_call) != DPI_SUCCESS) { \
@@ -59,6 +59,8 @@ typedef dpiBytes Bytes;
 typedef dpiNativeTypeNum data_type_t;
 
 bool is_connection_ok(Connection *p_connection);
+
+// TODO: remove
 ret_t get_airport_nb(Connection *p_connection, uint64_t *p_airport_nb);
 
 #endif  // DEF_EASY_DPI

@@ -1,9 +1,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "lib/easy_socket.h"
-#include "string.h"
 
 ret_t action(sock_fd_t server_sock_fd, SockAddr *p_client_sock_addr, sock_addr_size_t client_sock_addr_size, char *data, size_t data_size, bool may_overflow) {
     data[data_size - 1] = '\0';
