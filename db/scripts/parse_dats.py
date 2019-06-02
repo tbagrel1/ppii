@@ -7,7 +7,7 @@ disponibles par https://openflights.org/.
 
 __author__ = "Timothée Adam, Thomas Bagrel"
 __copyright__ = "Copyright 2019, PPII-A1"
-__credits__ = ["Thimothée Adam", "Thomas Bagrel"]
+__credits__ = ["Timothée Adam", "Thomas Bagrel"]
 __license__ = "Private"
 
 
@@ -16,6 +16,7 @@ import sys
 
 from pprint import pprint
 
+from math import cos, sin, sqrt, radians, atan2
 from parsers import *
 from persistance import *
 
@@ -324,9 +325,29 @@ def path_length(icao_to_airport, path_tuple):
     :param path_tuple: chemin dont on veut calculer la longueur
     :return:
     """
+    rayon = 6373.0
+    distance = 0
+    dst_airport = path_tuple[0]
 
-    # TODO implémenter le calcul des distances
-    return 0.0
+    for ICAO_airport in path_tuple :
+        print(path_tuple)
+        src_airport = dst_airport
+        dst_airport = ICAO_airport
+
+        src_lat = radians(icao_to_airport[src_airport]["latitude"])
+        src_long = radians(icao_to_airport[src_airport]["longitude"])
+        dst_lat = radians(icao_to_airport[dst_airport]["latitude"])
+        dst_long = radians(icao_to_airport[dst_airport]["longitude"])
+
+        diff_lat = src_lat - dst_lat
+        diff_long = src_long - dst_long
+
+        a = sin(diff_lat / 2)**2 + cos(dst_lat) * cos(src_lat) * sin(diff_long / 2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        distance = distance + rayon * c
+
+    return distance
 
 
 def extract_paths(exploitations, icao_to_airport):
@@ -358,7 +379,7 @@ def extract_paths(exploitations, icao_to_airport):
                     None if real_step_nb != len(path_tuple) is None
                     else path_length(icao_to_airport, path_tuple)),
                 "straight_distance": path_length(
-                    icao_to_airport, (path_tuple[0], path_tuple[:-1])),
+                    icao_to_airport, (path_tuple[0], path_tuple[-1])),
                 "path_tuple": path_tuple
             }
         else:
