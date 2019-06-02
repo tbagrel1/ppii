@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
     };
 
     HttpCallback airport_methods[] = {
-        //{ GET, get_airport },
+        { GET, get_airport },
         { POST, post_airport },
         { PATCH, patch_airport },
         HTTP_CALLBACK_END
