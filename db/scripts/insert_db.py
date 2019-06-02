@@ -7,7 +7,7 @@ from parse_dats import get_final_tables
 
 __author__ = "Timothée Adam, Thomas Bagrel"
 __copyright__ = "Copyright 2019, PPII-A1"
-__credits__ = ["Thimothée Adam", "Thomas Bagrel"]
+__credits__ = ["Timothée Adam", "Thomas Bagrel"]
 __license__ = "Private"
 
 import cx_Oracle
