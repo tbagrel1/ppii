@@ -8,6 +8,6 @@ TELECOM Nancy
 
 ## Auteurs
 
-Timothée Adam <mailto:thimothee.adam@telecomnancy.eu>  
-Thomas BAGREL <mailto:thomas.bagrel@telecomnancy.eu>
+Timothée Adam <mailto:timothee.adam@telecomnancy.eu>  
+Thomas BAGREL <mailto:thomas.bagrel@telecomnancy.eu> 
 

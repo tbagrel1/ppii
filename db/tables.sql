@@ -70,11 +70,11 @@ CREATE TABLE PlaneFleet (
 
 CREATE TABLE Exploitation,
     airline_icao CHAR(3) NOT NULL,
-    fleet_id NUMBER(8) NOT NULL,
+    fleet_id NUMBER(8),
     path_id NUMBER(8) NOT NULL,
     flight_no CHAR(8),
     is_codeshare NUMBER(1),
-    PRIMARY KEY (airline_icao, fleet_id, path_id, flight_no),
+    PRIMARY KEY (airline_icao, path_id, flight_no),
     FOREIGN KEY (airline_icao) REFERENCES Airline(icao),
     FOREIGN KEY (fleet_id) REFERENCES Fleet(id),
     FOREIGN KEY (path_id) REFERENCES Path(id)
