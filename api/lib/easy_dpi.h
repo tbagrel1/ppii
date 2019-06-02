@@ -45,7 +45,7 @@ extern int _nothing;
 #define END_QUERY \
         DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 4); \
     } \
-    DO_OR_RET(dpiStmt_getRowCount(p_statement, &row_nb), 3); \
+    DO_OR_RET(dpiStmt_getRowCount(p_statement, &row_nb), 9); \
     dpiStmt_release(p_statement);
 
 typedef struct dpiConn Connection;
