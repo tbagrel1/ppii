@@ -21,3 +21,11 @@ add_executable(udp
         lib/easy_socket.c lib/easy_socket.h
         lib/ret.c lib/ret.h
         lib/http_status.c lib/http_status.h)
+
+add_executable(db_test
+        db_test.c
+        lib/easy_dpi.c lib/easy_dpi.h
+        lib/ret.c lib/ret.h)
+
+find_library(ODPIC_PATH odpic)
+target_link_libraries(db_test "${ODPIC_PATH}")
