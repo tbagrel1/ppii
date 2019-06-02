@@ -149,7 +149,7 @@ volatile static bool _should_stop = false;
 void stop_server_handler(int sig) {
     if (sig == SIGINT || sig == SIGTERM) {
         _should_stop = true;
-        printf("\n--- SIG%s --> stopping server\n", sig == SIGINT ? "SIGINT" : "SIGTERM");
+        printf("\n--- %s --> stopping server\n", sig == SIGINT ? "SIGINT" : "SIGTERM");
     }
 }
 

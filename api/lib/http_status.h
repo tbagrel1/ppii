@@ -29,4 +29,6 @@ bool is_http_client_error(http_status_t status);
 bool is_http_server_error(http_status_t status);
 bool is_http_error(http_status_t status);
 
+char *http_status_reason(http_status_t status);
+
 #endif  // DEF_HTTP_STATUS

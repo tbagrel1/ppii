@@ -1,35 +1,59 @@
+#include <string.h>
+#include <stdio.h>
+
 #include "http_parser.h"
 
 ret_t parse_http_request(const char *data, size_t data_size, http_verb_t *p_http_verb, char **p_target, size_t *p_target_size, char **p_body, size_t *p_body_size) {
-    // TODO
+    if (strstr(data, "GET ") != data) {
+        return RET_ARG_ERR + 10 + 1;
+    }
+
+    *p_http_verb = GET;
+
+    const char *target_start = data + 4;
+    const char *target_end = data + 4;
+    while (*target_end != '\0' && *target_end != ' ' && *target_end != '\r' && *target_end != '\n' && *target_end != '\0') {
+        target_end++;
+    }
+    size_t target_length = target_end - target_start;
+
+    if (target_length == 0 || target_start[0] != '/') {
+        return RET_ARG_ERR + 10 + 2;
+    }
+
+    *p_target = malloc((target_length + 1) * sizeof(char));
+    memcpy(*p_target, target_start, target_length);
+    (*p_target)[target_length] = '\0';
+    *p_target_size = target_length + 1;
+
+    char *body_limit = strstr(data, "\r\n\r\n");
+    if (body_limit == NULL) {
+        *p_body = owned_string("", p_body_size);
+    } else {
+        body_limit += 4;
+        *p_body_size = data_size - (body_limit - data);
+        if (body_limit[*p_body_size - 1] != '\0') {
+            (*p_body_size)++;
+        }
+        *p_body = malloc(*p_body_size * sizeof(char));
+        memcpy(*p_body, body_limit, (*p_body_size) - 1);
+        (*p_body)[(*p_body_size) - 1] = '\0';
+    }
     return RET_OK;
 }
 
-/*
-Cette fonction a pour but de compiler l'expression régulière regex fournie sous forme de chaîne de caractères pour la transformer en structure de type dont l'adresse est passée en premier argument. Il est possible de modifier le comportement de cette fonction par l'intermédiaire de cflags qui peut être un OU binaire de l'une des constantes suivantes :
+ret_t make_http_response(http_status_t status, char *res, size_t res_size, char **p_http_response, size_t *p_http_response_size) {
+    *p_http_response = malloc((res_size + 100) * sizeof(char));
+    char *response_format = "HTTP/1.1 %d %s\r\n"
+                            "Content-Type: text/plain\r\n"
+                            "Content-Length: %lu\r\n"
+                            "\r\n"
+                            "%s\r\n"
+                            "\r\n";
+    sprintf(*p_http_response, response_format, status, http_status_reason(status), res_size, res);
+    free(res);
 
-REG_EXTENDED : permet d'utiliser le modèle d'expression régulière étendu plutôt que le mode basique qui est l'option par défaut
-REG_ICASE : permet d'ignorer la casse (minuscules/majuscules)
-REG_NOSUB : compile pour vérifier uniquement la concordance (vrai ou faux)
-REG_NEWLINE : Par défaut, le caractère de fin de ligne est un caractère normal. Avec cette option, les expressions '[^', '.' et '$' (nous reviendrons plus tard sur la signification de ces expressions) incluent le caractère de fin de ligne implicitement. L'ancre '^' reconnaît une chaîne vide après un caractère de fin de ligne.
-En cas de succès, la fonction retourne 0. En cas d'échec de la compilation, retourne un code d'erreur non nul.
-*/
-
-// int regcomp (regex_t *preg, const char *regex, int cflags);
-
-/*
-Une fois notre expression compilée, on va pouvoir la comparer à la chaîne de caractères string à l'aide de cette fonction. Le résultat de la comparaison sera stocké dans le tableau pmatch alloué à nmatch éléments par nos soins. Il est possible de modifier le comportement de grâce à eflags :
-
-REG_NOTBOL : le premier caractère de la chaîne échoue toujours. Ceci n'a pas d'effet s'il s'agit du caractère de fin de ligne et que l'option REG_NEWLINE a été utilisée pour compiler l'expression régulière
-REG_NOTEOL : idem sauf qu'il s'agit du dernier caractère. La remarque à propos de REG_NEWLINE est également valable
-retourne 0 en cas de succès ou REG_NOMATCH en cas d'échec.
-
-
-*/
-// int regexec (const regex_t *preg, const char *string, size_t nmatch, regmatch_t pmatch[], int eflags);
-
-ret_t make_http_response(http_status_t status, const char *res, size_t res_size, char **p_http_response, size_t *p_http_response_size) {
-    // TODO
+    *p_http_response_size = strlen(*p_http_response) + 1;
     return RET_OK;
 }
 

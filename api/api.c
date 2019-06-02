@@ -124,9 +124,7 @@ int max(int a, int b) {
 }
 
 ret_t append_and_free(char **p_dest, size_t *p_dest_size, size_t *p_dest_space, char *part, size_t part_size) {
-    if (*p_dest_size - 1 + part_size <= *p_dest_space) {
-        memcpy(*p_dest + *p_dest_size - 1, part, part_size);
-    } else {
+    if (*p_dest_size - 1 + part_size > *p_dest_space) {
         size_t new_dest_space = max(2 * (*p_dest_space), (*p_dest_space) + 2 * part_size);
         char *new_dest = realloc(*p_dest, new_dest_space);
         if (new_dest == NULL) {
@@ -137,6 +135,7 @@ ret_t append_and_free(char **p_dest, size_t *p_dest_size, size_t *p_dest_space, 
         *p_dest = new_dest;
         *p_dest_space = new_dest_space;
     }
+    memcpy(*p_dest + *p_dest_size - 1, part, part_size);
     (*p_dest_size) += (part_size - 1);
     free(part);
     return RET_OK;
@@ -289,14 +288,14 @@ ret_t get_all_paths(http_status_t *p_status, char **p_res, size_t *p_res_size, c
     BEGIN_QUERY(p_connection, query)
     ITER_FETCH
         if (!is_ret_ok((ret_value = path_row_to_string(p_statement, &part, &part_size, "\n", "\n", true)))) {
-            return ret_value;
+            return ret_value + 70;
         }
         DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 5);
         if (!found) {
             return RET_INTERNAL_ERR + 6;
         }
         if (!is_ret_ok((ret_value = path_row_to_string(p_statement, &part, &part_size, "\n", "\n", false)))) {
-            return ret_value;
+            return ret_value + 80;
         }
         if (!is_ret_ok((ret_value = append_and_free(&res, &res_size, &res_space, part, part_size)))) {
             return ret_value + 20;
@@ -306,6 +305,7 @@ ret_t get_all_paths(http_status_t *p_status, char **p_res, size_t *p_res_size, c
     *p_status = HTTP_OK;
     *p_res = res;
     *p_res_size = res_size;
+
     return RET_OK;
 }
 
@@ -335,23 +335,24 @@ ret_t get_path_by_id(http_status_t *p_status, char **p_res, size_t *p_res_size, 
     static char query[1024];
     char *query_format = "SELECT p.id, p.straight_distance, s.airport_icao "
                          "FROM Path p JOIN AirportPath s ON p.id = s.path_id "
-                         "WHERE s.step_no = 0 OR s.step_no = p.db_step_nb - 1 "
+                         "WHERE (s.step_no = 0 OR s.step_no = p.db_step_nb - 1) "
                          "AND p.id = %s "
                          "ORDER BY p.id ASC, s.step_no ASC ";
 
     sprintf(query, query_format, target);
+    printf("%s\n", query);
 
     BEGIN_QUERY(p_connection, query)
     ITER_FETCH
         if (!is_ret_ok((ret_value = path_row_to_string(p_statement, p_res, p_res_size, "\n", "", true)))) {
-            return ret_value;
+            return ret_value + 70;
         }
         DO_OR_RET(dpiStmt_fetch(p_statement, &found, &buffer_row_index), 5);
         if (!found) {
             return RET_INTERNAL_ERR + 6;
         }
         if (!is_ret_ok((ret_value = path_row_to_string(p_statement, p_res, p_res_size, "\n", "", false)))) {
-            return ret_value;
+            return ret_value + 80;
         }
         *p_status = HTTP_OK;
     END_QUERY
@@ -425,6 +426,8 @@ ret_t action(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
         return RET_OK;
     }
 
+    printf("target: |%s|, body: |%s|\n", target, body);
+
     ret_value = route(p_api, &http_status, &res, &res_size, GET, target, body);
     if (is_ret_custom(ret_value)) {
         printf("[W] No method for target \"%s\" from client #%d\n", target, client_sock_fd);
@@ -452,9 +455,13 @@ ret_t action(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
     if (is_ret_err(make_http_response(http_status, res, res_size, &http_response, &http_response_size))) {
         return RET_INTERNAL_ERR + 57;
     }
-    if (is_ret_err(send_and_free(client_sock_fd, http_response, http_response_size))) {
+    //                                                                     doesn't like \0
+    if (is_ret_err(send_and_free(client_sock_fd, http_response, http_response_size - 1))) {
         return RET_INTERNAL_ERR + 58;
     }
+
+    free(target);
+    free(body);
 
     return RET_OK;
 }
@@ -477,6 +484,15 @@ ret_t action_test(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_re
         printf("[W] Data from client #%d cut [:1024]\n", client_sock_fd);
     }
 
+    read_buffer[read_size - 1] = '\0';
+    while (read_size > 2 && read_buffer[read_size - 2] == '\r') {
+        read_buffer[(read_size--) - 2] = '\0';
+    }
+
+    while (read_size > 1 && (read_buffer[read_size - 1] == '\n' || read_buffer[read_size - 1] == ' ')) {
+        read_buffer[(read_size--) - 1] = '\0';
+    }
+
     ret_t ret_value;
 
     http_verb_t http_verb;
@@ -490,12 +506,11 @@ ret_t action_test(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_re
     char *http_response;
     size_t http_response_size;
 
-    ret_value = route(p_api, &http_status, &res, &res_size, GET, "/path/1", "");
-    // TODO: mettre les routes pour path !
+    ret_value = route(p_api, &http_status, &res, &res_size, GET, read_buffer, "");
     if (is_ret_err(ret_value)) {
         return ret_value;
     } else {
-        printf("[I] Successfully computed for client #%d:\n%s\n", client_sock_fd, res);
+        printf("[I] Successfully computed for client #%d [%d]:\n%s\n", client_sock_fd, http_status, res);
         return RET_OK;
     }
 }
@@ -507,6 +522,29 @@ ret_t action_on_disconnect(sock_fd_t client_sock_fd) {
 
 int main(int argc, char **argv) {
 
+    HttpCallback path_all_methods[] = {
+        { GET, get_all_paths },
+        HTTP_CALLBACK_END
+    };
+    Route path_all_route = {
+        "*",
+        path_all_methods,
+        &ROUTE_END
+    };
+    HttpCallback path_methods[] = {
+        { GET, get_path_by_id },
+        HTTP_CALLBACK_END
+    };
+    Route path_subroutes[] = {
+        path_all_route,
+        ROUTE_END
+    };
+    Route path_route = {
+        "path",
+        path_methods,
+        path_subroutes
+    };
+
     HttpCallback airport_all_methods[] = {
         { GET, get_all_airports },
         HTTP_CALLBACK_END
@@ -516,21 +554,11 @@ int main(int argc, char **argv) {
         airport_all_methods,
         &ROUTE_END
     };
-    //HttpCallback airport_where_methods[] = {
-    //    { GET, get_airport_where },
-    //    HTTP_CALLBACK_END
-    //};
-    //Route airport_where_route = {
-    //    "where",
-    //    airport_where_methods,
-    //    &ROUTE_END
-    //};
     HttpCallback airport_methods[] = {
         { GET, get_airport_by_icao },
         HTTP_CALLBACK_END
     };
     Route airport_subroutes[] = {
-    //    airport_where_route,
         airport_all_route,
         ROUTE_END
     };
@@ -546,7 +574,7 @@ int main(int argc, char **argv) {
     };
     Route api_subroutes[] = {
         airport_route,
-        // path_route,
+        path_route,
         ROUTE_END
     };
     Route api = {
@@ -580,6 +608,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    printf("CONNECTED\n");
+
     AddrInet server_addr_inet;
     port_t server_port = 8080;
     SockAddrInet server_sock_addr_inet;
@@ -593,7 +623,7 @@ int main(int argc, char **argv) {
 
     // TODO: change action_test -> action
     ret_t server_exit_ret_value = run_multiplexed_tcp_serv(
-        server_sock_fd, 1.0, &action_on_connect, &action_test, &action_on_disconnect, false);
+        server_sock_fd, 1.0, &action_on_connect, &action, &action_on_disconnect, false);
 
     close(server_sock_fd);
 
