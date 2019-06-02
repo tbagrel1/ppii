@@ -54,8 +54,8 @@ AIRPORT_PARSING_RULES = lambda *keep_edit_discard_memory: [
         "airport", "country", *keep_edit_discard_memory), "opt": False},
     {"name": "iata", "parser": airport_iata, "opt": True},
     {"name": "icao", "parser": airport_icao, "opt": False},
-    {"name": "lat", "parser": lat, "opt": False},
-    {"name": "long", "parser": long, "opt": False},
+    {"name": "latitude", "parser": latitude, "opt": False},
+    {"name": "longitude", "parser": longitude, "opt": False},
     {"name": "altitude", "parser": altitude_with_ft_to_m_conversion,
      "opt": True},
     {"name": "utc_offset", "parser": utc_offset, "opt": True},
@@ -296,14 +296,12 @@ def index_table_by(
 
 
 def replace_source_destination_by_path(routes):
-    """
-    Modifie en place la table des routes spécifiée afin de remplacer les champs
-    source_airport_icao et destination_airport_icao par un champ path_tuple
-    contenant le tuple (source_airport_icao, destination_airport_icao).
-    :param routes: table route à modifier (en place)
-    :return: rien (None)
-    """
+    new_routes = []
+
     for route in routes:
+        if route["source_airport_icao"] == route["destination_airport_icao"]:
+            continue
+
         route["path_tuple"] = (
             route["source_airport_icao"],
             route["destination_airport_icao"]
@@ -311,6 +309,10 @@ def replace_source_destination_by_path(routes):
 
         del route["source_airport_icao"]
         del route["destination_airport_icao"]
+
+        new_routes.append(route)
+
+    return new_routes
 
 
 def path_length(icao_to_airport, path_tuple):
@@ -456,7 +458,7 @@ def get_final_tables():
 
     print_box("Parsing of Plane, Airport and Airline")
 
-    with JsonPersistance(PERSISTANCE_ROOT_DIR, [
+    with JsonPersistence(PERSISTANCE_ROOT_DIR, [
                 ("to_keep.json", dict),
                 ("to_edit.json", dict),
                 ("to_discard.json", dict),
@@ -485,7 +487,7 @@ def get_final_tables():
     # On enforce l'unicité des clés primaires de chaque table avec un appel à
     # index_table_by
 
-    with JsonPersistance(PERSISTANCE_ROOT_DIR, [
+    with JsonPersistence(PERSISTANCE_ROOT_DIR, [
                 ("unique_choice.json", dict)
             ], ask_confirmation=False) as persistance:
         keep_edit_discard_memory = persistance[0]
@@ -522,9 +524,9 @@ def get_final_tables():
     routes = parse_table(
         path.join(RESOURCES_ROOT_DIR, "routes.dat"),
         "Route", ROUTE_PARSING_RULES, *maps)
-    replace_source_destination_by_path(routes)
+    routes = replace_source_destination_by_path(routes)
     add_new_fields(routes, [
-        ("flight_no", None)])
+        ("flight_no", "UNKNOW")])
     print("\n")
 
     flights = parse_table(
