@@ -329,10 +329,9 @@ def path_length(icao_to_airport, path_tuple):
     distance = 0
     dst_airport = path_tuple[0]
 
-    for ICAO_airport in path_tuple :
-        print(path_tuple)
+    for airport_icao_ in path_tuple:
         src_airport = dst_airport
-        dst_airport = ICAO_airport
+        dst_airport = airport_icao_
 
         src_lat = radians(icao_to_airport[src_airport]["latitude"])
         src_long = radians(icao_to_airport[src_airport]["longitude"])
@@ -376,7 +375,7 @@ def extract_paths(exploitations, icao_to_airport):
                 "real_step_nb": real_step_nb,
                 "db_step_nb": len(path_tuple),
                 "real_distance": (
-                    None if real_step_nb != len(path_tuple) is None
+                    None if real_step_nb != len(path_tuple)
                     else path_length(icao_to_airport, path_tuple)),
                 "straight_distance": path_length(
                     icao_to_airport, (path_tuple[0], path_tuple[-1])),
