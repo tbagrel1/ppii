@@ -95,6 +95,28 @@ ret_t open_sock_inet_tcp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
     return RET_OK;
 }
 
+/**
+ * Créé/ouvre un socket internet TCP (SOCK_STREAM), et exécute connect pour en faire un socket client
+ * @param p_sock_fd pointeur vers la variable dans laquelle placer le descripteur de socket résultat
+ * @param p_sock_addr_inet pointeur vers la struct SockAddrInet à utiliser pour le socket
+ * @param p_server_sock_addr_inet un pointer vers la struct SockAddrInet qui décrit le serveur auquel on doit se connecter
+ * @return une valeur RET
+ */
+ret_t open_sock_inet_tcp_client(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, SockAddrInet *p_server_sock_addr_inet) {
+    *p_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (*p_sock_fd == -1) {
+        return RET_ERRNO_ERR;
+    }
+    if (bind(*p_sock_fd, (SockAddr *) (p_sock_addr_inet), SOCK_ADDR_INET_LEN) == -1) {
+        return RET_ERRNO_ERR;
+    }
+    if (connect(*p_sock_fd, (SockAddr *) (p_server_sock_addr_inet), SOCK_ADDR_INET_LEN) == -1) {
+        return RET_ERRNO_ERR;
+    }
+
+    return RET_OK;
+}
+
 ret_t open_sock_inet_udp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
     *p_sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (*p_sock_fd == -1) {
@@ -114,7 +136,9 @@ ret_t open_sock_inet_udp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
  * @param queue_max_size taille maximale de la file de clients en attente de connexion
  * @return une valeur RET
  */
-ret_t open_sock_inet_tcp_serv(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, size_t queue_max_size) {
+ret_t open_sock_inet_tcp_server(sock_fd_t *p_sock_fd,
+                                SockAddrInet *p_sock_addr_inet,
+                                size_t queue_max_size) {
     *p_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (*p_sock_fd == -1) {
         printf("err socket\n");
@@ -198,11 +222,11 @@ ret_t run_udp_serv(sock_fd_t serv_sock_fd, size_t buffer_size, action_udp_fp p_a
     return RET_OK;
 }
 
-ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
-                               action_tcp_on_connect_fp p_action_on_connect,
-                               action_tcp_fp p_action,
-                               action_tcp_on_disconnect_fp p_action_on_disconnect,
-                               bool trigger_without_read_ready) {
+ret_t run_multiplexed_tcp_server(sock_fd_t serv_sock_fd, double timeout,
+                                 action_tcp_on_connect_fp p_action_on_connect,
+                                 action_tcp_fp p_action,
+                                 action_tcp_on_disconnect_fp p_action_on_disconnect,
+                                 bool trigger_without_read_ready) {
 
     fd_set client_set, read_set, write_set, except_set;
     FD_ZERO(&client_set);

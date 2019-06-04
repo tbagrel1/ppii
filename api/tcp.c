@@ -65,10 +65,11 @@ int main() {
 
     sock_fd_t server_sock_fd;
 
-    open_sock_inet_tcp_serv(&server_sock_fd, &server_sock_addr_inet, 10);
+    open_sock_inet_tcp_server(&server_sock_fd, &server_sock_addr_inet, 10);
 
-    printf("Server exit code: %d\n", run_multiplexed_tcp_serv(server_sock_fd, 1.0, &action_on_connect, &action,
-                             &action_on_disconnect, false));
+    printf("Server exit code: %d\n",
+           run_multiplexed_tcp_server(server_sock_fd, 1.0, &action_on_connect,
+                                      &action, &action_on_disconnect, false));
 
     close(server_sock_fd);
 

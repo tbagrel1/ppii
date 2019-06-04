@@ -101,3 +101,28 @@ char * owned(const char *source, size_t source_size) {
     memcpy(result, source, source_size);
     return result;
 }
+
+const char *http_verb_to_string(http_verb_t http_verb) {
+    switch (http_verb) {
+        case GET:
+            return "GET";
+        case HEAD:
+            return "HEAD";
+        case POST:
+            return "POST";
+        case PUT:
+            return "PUT";
+        case DELETE:
+            return "DELETE";
+        case CONNECT:
+            return "CONNECT";
+        case OPTIONS:
+            return "OPTIONS";
+        case TRACE:
+            return "TRACE";
+        case PATCH:
+            return "PATCH";
+        default:
+            return NULL;
+    }
+}
