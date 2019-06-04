@@ -47,13 +47,16 @@ ret_t open_sock_inet_tcp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet);
 
 ret_t open_sock_inet_udp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet);
 
-ret_t open_sock_inet_tcp_serv(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, size_t queue_max_size);
+ret_t open_sock_inet_tcp_server(sock_fd_t *p_sock_fd,
+                                SockAddrInet *p_sock_addr_inet,
+                                size_t queue_max_size);
+ret_t open_sock_inet_tcp_client(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, SockAddrInet *p_server_sock_addr_inet);
 
-ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
-                               action_tcp_on_connect_fp p_action_on_connect,
-                               action_tcp_fp p_action,
-                               action_tcp_on_disconnect_fp p_action_on_disconnect,
-                               bool trigger_without_read_ready);
+ret_t run_multiplexed_tcp_server(sock_fd_t serv_sock_fd, double timeout,
+                                 action_tcp_on_connect_fp p_action_on_connect,
+                                 action_tcp_fp p_action,
+                                 action_tcp_on_disconnect_fp p_action_on_disconnect,
+                                 bool trigger_without_read_ready);
 ret_t run_udp_serv(sock_fd_t serv_sock_fd, size_t buffer_size, action_udp_fp p_action);
 
 #endif  // DEF_EASY_SOCKET

@@ -50,4 +50,6 @@ char * owned_string(const char *source, size_t *p_source_size);
 
 char * owned(const char *source, size_t source_size);
 
+const char *http_verb_to_string(http_verb_t http_verb);
+
 #endif  // DEF_HTTP_ROUTER
