@@ -46,10 +46,6 @@ ret_t route(Route const *p_origin, http_status_t *p_status, char **p_res, size_t
 ret_t _route(Route const *p_route, http_status_t *p_status, char **p_res, size_t *p_res_size,
              http_verb_t http_verb, const char *target, const char *body);
 
-char * owned_string(const char *source, size_t *p_source_size);
-
-char * owned(const char *source, size_t source_size);
-
 const char *http_verb_to_string(http_verb_t http_verb);
 
 #endif  // DEF_HTTP_ROUTER

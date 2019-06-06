@@ -376,12 +376,6 @@ ret_t action_on_connect(sock_fd_t new_client_sock_fd, SockAddr *p_client_sock_ad
     return RET_OK;
 }
 
-ret_t send_and_free(sock_fd_t client_sock_fd, char *http_response, size_t http_response_size) {
-    ret_t ret_value = send(client_sock_fd, http_response, http_response_size, NO_FLAGS) == (ssize_t) (http_response_size) ? RET_OK : RET_INTERNAL_ERR + 1;
-    free(http_response);
-    return ret_value;
-}
-
 ret_t action(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
              bool is_except_ready) {
 

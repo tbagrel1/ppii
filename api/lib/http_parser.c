@@ -3,6 +3,7 @@
 
 #include "easy_socket.h"
 #include "http_parser.h"
+#include "http_router.h"
 
 ret_t parse_http_request(const char *data, size_t data_size, http_verb_t *p_http_verb, char **p_target, size_t *p_target_size, char **p_body, size_t *p_body_size) {
     if (strstr(data, "GET ") != data) {
