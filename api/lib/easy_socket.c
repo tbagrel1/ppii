@@ -1,3 +1,5 @@
+#include "ret.h"
+#include "http_router.h"
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -309,4 +311,27 @@ ret_t run_multiplexed_tcp_server(sock_fd_t serv_sock_fd, double timeout,
     printf("--- Exiting the multiplexed TCP server\n");
 
     return RET_OK;
+}
+
+ret_t send_and_free(sock_fd_t sock_fd, char *http_content, size_t http_content_size) {
+    ret_t ret_value = send(sock_fd, http_content, http_content_size, NO_FLAGS) == (ssize_t) (http_content_size) ? RET_OK : RET_INTERNAL_ERR + 1;
+    free(http_content);
+    return ret_value;
+}
+
+char * owned_string(const char *source, size_t *p_source_size) {
+    size_t n = strlen(source);
+    char * result = ((char *) (malloc((n + 1) * sizeof(*result))));
+    memcpy(result, source, n);
+    result[n] = '\0';
+    if (p_source_size != NULL) {
+        *p_source_size = n + 1;
+    }
+    return result;
+}
+
+char * owned(const char *source, size_t source_size) {
+    char * result = ((char *) (malloc(source_size * sizeof(*result))));
+    memcpy(result, source, source_size);
+    return result;
 }

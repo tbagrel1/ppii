@@ -2,6 +2,7 @@
 
 #include "http_router.h"
 #include "ret.h"
+#include "easy_socket.h"
 
 const Route ROUTE_END = { "END", NULL, NULL };
 const HttpCallback HTTP_CALLBACK_END = { GET, NULL };
@@ -83,23 +84,6 @@ bool Route__shallow_eq(Route const *p_route, Route const *p_other) {
         p_route->subroutes == p_other->subroutes &&
         p_route->http_callbacks == p_other->http_callbacks
     );
-}
-
-char * owned_string(const char *source, size_t *p_source_size) {
-    size_t n = strlen(source);
-    char * result = ((char *) (malloc((n + 1) * sizeof(*result))));
-    memcpy(result, source, n);
-    result[n] = '\0';
-    if (p_source_size != NULL) {
-        *p_source_size = n + 1;
-    }
-    return result;
-}
-
-char * owned(const char *source, size_t source_size) {
-    char * result = ((char *) (malloc(source_size * sizeof(*result))));
-    memcpy(result, source, source_size);
-    return result;
 }
 
 const char *http_verb_to_string(http_verb_t http_verb) {

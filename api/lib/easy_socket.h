@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 
 #include "ret.h"
+#include "http_status.h"
 
 #define IPSTR(ps) (inet_ntoa(((SockAddrInet *) (ps))->sin_addr))
 #define NO_FLAGS 0
@@ -58,5 +59,11 @@ ret_t run_multiplexed_tcp_server(sock_fd_t serv_sock_fd, double timeout,
                                  action_tcp_on_disconnect_fp p_action_on_disconnect,
                                  bool trigger_without_read_ready);
 ret_t run_udp_serv(sock_fd_t serv_sock_fd, size_t buffer_size, action_udp_fp p_action);
+
+ret_t send_and_free(sock_fd_t sock_fd, char *http_content, size_t http_content_size);
+
+char * owned_string(const char *source, size_t *p_source_size);
+
+char * owned(const char *source, size_t source_size);
 
 #endif  // DEF_EASY_SOCKET
