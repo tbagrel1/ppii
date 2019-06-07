@@ -21,7 +21,8 @@ INNER JOIN
 ) t2
 ON t2.country_count_max = t1.country_count
 
-#Retourne le vol le plus long allant à New York
+#Retourne le vol le plus long à destination de New York
+
 WITH t1 AS (
     SELECT Path.db_step_nb, Path.id, Path.straight_distance, AirportPath.airport_icao
     FROM Path
@@ -42,7 +43,7 @@ INNER JOIN (
     ) t2
 ON t2.dist_max = t1.straight_distance
 
-#Retourne le vol le plus court allant à New York
+#Retourne le vol le plus court à destination de New York
 
 WITH t1 AS (
     SELECT Path.db_step_nb, Path.id, Path.straight_distance, AirportPath.airport_icao
@@ -59,7 +60,7 @@ WITH t1 AS (
 SELECT t1.id, t1.straight_distance
 FROM t1
 INNER JOIN (
-    SELECT MIN(t1.straight_distance) AS dist_max
+    SELECT MIN(t1.straight_distance) AS dist_min
     FROM t1
     ) t2
-ON t2.dist_max = t1.straight_distance
+ON t2.dist_min = t1.straight_distance

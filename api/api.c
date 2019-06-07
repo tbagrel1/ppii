@@ -167,6 +167,37 @@ ret_t get_all_airports(http_status_t *p_status, char **p_res, size_t *p_res_size
     return RET_OK;
 }
 
+ret_t get_all_reachable_airports(http_status_t *p_status, char **p_res, size_t *p_res_size, const char *target, const char *body) {
+    char *res = owned_string("", NULL);
+    size_t res_size = 1;
+    size_t res_space = 1;
+    ret_t ret_value;
+
+    char *part;
+    size_t part_size;
+
+    char *query = "SELECT DISTINCT a.icao, a.iata, a.name, a.city, a.country, a.latitude, a.longitude, a.altitude, a.utc_offset, a.daylight_saving_group, a.tz_name, a.type, a.data_source "
+                  "FROM Path p "
+                  "JOIN AirportPath s ON p.id = s.path_id "
+                  "JOIN Airport a ON s.airport_icao = a.icao "
+                  "WHERE s.step_no = 0 OR s.step_no = p.db_step_nb - 1";
+
+    BEGIN_QUERY(p_connection, query)
+    ITER_FETCH
+        if (!is_ret_ok((ret_value = airport_row_to_string(p_statement, &part, &part_size, "\n", "\n")))) {
+            return ret_value;
+        }
+        if (!is_ret_ok((ret_value = append_and_free(&res, &res_size, &res_space, part, part_size)))) {
+            return ret_value + 20;
+        }
+    END_QUERY
+
+    *p_status = HTTP_OK;
+    *p_res = res;
+    *p_res_size = res_size;
+    return RET_OK;
+}
+
 bool is_upper_alphanum(char c) {
     return (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
 }
@@ -376,12 +407,6 @@ ret_t action_on_connect(sock_fd_t new_client_sock_fd, SockAddr *p_client_sock_ad
     return RET_OK;
 }
 
-ret_t send_and_free(sock_fd_t client_sock_fd, char *http_response, size_t http_response_size) {
-    ret_t ret_value = send(client_sock_fd, http_response, http_response_size, NO_FLAGS) == (ssize_t) (http_response_size) ? RET_OK : RET_INTERNAL_ERR + 1;
-    free(http_response);
-    return ret_value;
-}
-
 ret_t action(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
              bool is_except_ready) {
 
@@ -426,7 +451,7 @@ ret_t action(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
         return RET_OK;
     }
 
-    printf("target: |%s|, body: |%s|\n", target, body);
+    printf("[I] Request verb: %s, target: %s, body: >>>%s<<<\n", http_verb_to_string(http_verb), target, body);
 
     ret_value = route(p_api, &http_status, &res, &res_size, GET, target, body);
     if (is_ret_custom(ret_value)) {
@@ -462,57 +487,9 @@ ret_t action(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
 
     free(target);
     free(body);
+    printf("[I] Response sent to client #%d\n", client_sock_fd);
 
     return RET_OK;
-}
-
-ret_t action_test(sock_fd_t client_sock_fd, bool is_read_ready, bool is_write_ready,
-             bool is_except_ready) {
-
-    static char read_buffer[READ_BUFFER_SIZE];
-
-    ssize_t read_size = recv(client_sock_fd, read_buffer, READ_BUFFER_SIZE, NO_FLAGS);
-    if (read_size == 0) {
-        // Disconnection
-        return RET_CUSTOM;
-    }
-    if (read_size < 0) {
-        return RET_INTERNAL_ERR + 1;
-    }
-    printf("[I] Data received from client #%d\n", client_sock_fd);
-    if (read_size == READ_BUFFER_SIZE) {
-        printf("[W] Data from client #%d cut [:1024]\n", client_sock_fd);
-    }
-
-    read_buffer[read_size - 1] = '\0';
-    while (read_size > 2 && read_buffer[read_size - 2] == '\r') {
-        read_buffer[(read_size--) - 2] = '\0';
-    }
-
-    while (read_size > 1 && (read_buffer[read_size - 1] == '\n' || read_buffer[read_size - 1] == ' ')) {
-        read_buffer[(read_size--) - 1] = '\0';
-    }
-
-    ret_t ret_value;
-
-    http_verb_t http_verb;
-    char *target;
-    size_t target_size;
-    char *body;
-    size_t body_size;
-    http_status_t http_status;
-    char *res;
-    size_t res_size;
-    char *http_response;
-    size_t http_response_size;
-
-    ret_value = route(p_api, &http_status, &res, &res_size, GET, read_buffer, "");
-    if (is_ret_err(ret_value)) {
-        return ret_value;
-    } else {
-        printf("[I] Successfully computed for client #%d [%d]:\n%s\n", client_sock_fd, http_status, res);
-        return RET_OK;
-    }
 }
 
 ret_t action_on_disconnect(sock_fd_t client_sock_fd) {
@@ -554,12 +531,22 @@ int main(int argc, char **argv) {
         airport_all_methods,
         &ROUTE_END
     };
+    HttpCallback airport_all_reachable_methods[] = {
+        { GET, get_all_reachable_airports },
+        HTTP_CALLBACK_END
+    };
+    Route airport_all_reachable_route = {
+        "*?",
+        airport_all_reachable_methods,
+        &ROUTE_END
+    };
     HttpCallback airport_methods[] = {
         { GET, get_airport_by_icao },
         HTTP_CALLBACK_END
     };
     Route airport_subroutes[] = {
         airport_all_route,
+        airport_all_reachable_route,
         ROUTE_END
     };
     Route airport_route = {
@@ -619,11 +606,11 @@ int main(int argc, char **argv) {
 
     sock_fd_t server_sock_fd;
 
-    open_sock_inet_tcp_serv(&server_sock_fd, &server_sock_addr_inet, 10);
+    open_sock_inet_tcp_server(&server_sock_fd, &server_sock_addr_inet, 10);
 
-    // TODO: change action_test -> action
-    ret_t server_exit_ret_value = run_multiplexed_tcp_serv(
-        server_sock_fd, 1.0, &action_on_connect, &action, &action_on_disconnect, false);
+    ret_t server_exit_ret_value =
+        run_multiplexed_tcp_server(server_sock_fd, 1.0, &action_on_connect,
+                                   &action, &action_on_disconnect, false);
 
     close(server_sock_fd);
 

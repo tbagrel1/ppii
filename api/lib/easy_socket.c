@@ -1,3 +1,5 @@
+#include "ret.h"
+#include "http_router.h"
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -95,6 +97,28 @@ ret_t open_sock_inet_tcp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
     return RET_OK;
 }
 
+/**
+ * Créé/ouvre un socket internet TCP (SOCK_STREAM), et exécute connect pour en faire un socket client
+ * @param p_sock_fd pointeur vers la variable dans laquelle placer le descripteur de socket résultat
+ * @param p_sock_addr_inet pointeur vers la struct SockAddrInet à utiliser pour le socket
+ * @param p_server_sock_addr_inet un pointer vers la struct SockAddrInet qui décrit le serveur auquel on doit se connecter
+ * @return une valeur RET
+ */
+ret_t open_sock_inet_tcp_client(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, SockAddrInet *p_server_sock_addr_inet) {
+    *p_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (*p_sock_fd == -1) {
+        return RET_ERRNO_ERR;
+    }
+    if (bind(*p_sock_fd, (SockAddr *) (p_sock_addr_inet), SOCK_ADDR_INET_LEN) == -1) {
+        return RET_ERRNO_ERR;
+    }
+    if (connect(*p_sock_fd, (SockAddr *) (p_server_sock_addr_inet), SOCK_ADDR_INET_LEN) == -1) {
+        return RET_ERRNO_ERR;
+    }
+
+    return RET_OK;
+}
+
 ret_t open_sock_inet_udp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
     *p_sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (*p_sock_fd == -1) {
@@ -114,7 +138,9 @@ ret_t open_sock_inet_udp(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet) {
  * @param queue_max_size taille maximale de la file de clients en attente de connexion
  * @return une valeur RET
  */
-ret_t open_sock_inet_tcp_serv(sock_fd_t *p_sock_fd, SockAddrInet *p_sock_addr_inet, size_t queue_max_size) {
+ret_t open_sock_inet_tcp_server(sock_fd_t *p_sock_fd,
+                                SockAddrInet *p_sock_addr_inet,
+                                size_t queue_max_size) {
     *p_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (*p_sock_fd == -1) {
         printf("err socket\n");
@@ -198,11 +224,11 @@ ret_t run_udp_serv(sock_fd_t serv_sock_fd, size_t buffer_size, action_udp_fp p_a
     return RET_OK;
 }
 
-ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
-                               action_tcp_on_connect_fp p_action_on_connect,
-                               action_tcp_fp p_action,
-                               action_tcp_on_disconnect_fp p_action_on_disconnect,
-                               bool trigger_without_read_ready) {
+ret_t run_multiplexed_tcp_server(sock_fd_t serv_sock_fd, double timeout,
+                                 action_tcp_on_connect_fp p_action_on_connect,
+                                 action_tcp_fp p_action,
+                                 action_tcp_on_disconnect_fp p_action_on_disconnect,
+                                 bool trigger_without_read_ready) {
 
     fd_set client_set, read_set, write_set, except_set;
     FD_ZERO(&client_set);
@@ -285,4 +311,27 @@ ret_t run_multiplexed_tcp_serv(sock_fd_t serv_sock_fd, double timeout,
     printf("--- Exiting the multiplexed TCP server\n");
 
     return RET_OK;
+}
+
+ret_t send_and_free(sock_fd_t sock_fd, char *http_content, size_t http_content_size) {
+    ret_t ret_value = send(sock_fd, http_content, http_content_size, NO_FLAGS) == (ssize_t) (http_content_size) ? RET_OK : RET_INTERNAL_ERR + 1;
+    free(http_content);
+    return ret_value;
+}
+
+char * owned_string(const char *source, size_t *p_source_size) {
+    size_t n = strlen(source);
+    char * result = ((char *) (malloc((n + 1) * sizeof(*result))));
+    memcpy(result, source, n);
+    result[n] = '\0';
+    if (p_source_size != NULL) {
+        *p_source_size = n + 1;
+    }
+    return result;
+}
+
+char * owned(const char *source, size_t source_size) {
+    char * result = ((char *) (malloc(source_size * sizeof(*result))));
+    memcpy(result, source, source_size);
+    return result;
 }
