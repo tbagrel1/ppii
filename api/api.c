@@ -167,6 +167,37 @@ ret_t get_all_airports(http_status_t *p_status, char **p_res, size_t *p_res_size
     return RET_OK;
 }
 
+ret_t get_all_reachable_airports(http_status_t *p_status, char **p_res, size_t *p_res_size, const char *target, const char *body) {
+    char *res = owned_string("", NULL);
+    size_t res_size = 1;
+    size_t res_space = 1;
+    ret_t ret_value;
+
+    char *part;
+    size_t part_size;
+
+    char *query = "SELECT DISTINCT a.icao, a.iata, a.name, a.city, a.country, a.latitude, a.longitude, a.altitude, a.utc_offset, a.daylight_saving_group, a.tz_name, a.type, a.data_source "
+                  "FROM Path p "
+                  "JOIN AirportPath s ON p.id = s.path_id "
+                  "JOIN Airport a ON s.airport_icao = a.icao "
+                  "WHERE s.step_no = 0 OR s.step_no = p.db_step_nb - 1";
+
+    BEGIN_QUERY(p_connection, query)
+    ITER_FETCH
+        if (!is_ret_ok((ret_value = airport_row_to_string(p_statement, &part, &part_size, "\n", "\n")))) {
+            return ret_value;
+        }
+        if (!is_ret_ok((ret_value = append_and_free(&res, &res_size, &res_space, part, part_size)))) {
+            return ret_value + 20;
+        }
+    END_QUERY
+
+    *p_status = HTTP_OK;
+    *p_res = res;
+    *p_res_size = res_size;
+    return RET_OK;
+}
+
 bool is_upper_alphanum(char c) {
     return (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
 }
@@ -500,12 +531,22 @@ int main(int argc, char **argv) {
         airport_all_methods,
         &ROUTE_END
     };
+    HttpCallback airport_all_reachable_methods[] = {
+        { GET, get_all_reachable_airports },
+        HTTP_CALLBACK_END
+    };
+    Route airport_all_reachable_route = {
+        "*?",
+        airport_all_reachable_methods,
+        &ROUTE_END
+    };
     HttpCallback airport_methods[] = {
         { GET, get_airport_by_icao },
         HTTP_CALLBACK_END
     };
     Route airport_subroutes[] = {
         airport_all_route,
+        airport_all_reachable_route,
         ROUTE_END
     };
     Route airport_route = {
