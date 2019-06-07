@@ -60,7 +60,7 @@ WITH t1 AS (
 SELECT t1.id, t1.straight_distance
 FROM t1
 INNER JOIN (
-    SELECT MIN(t1.straight_distance) AS dist_max
+    SELECT MIN(t1.straight_distance) AS dist_min
     FROM t1
     ) t2
-ON t2.dist_max = t1.straight_distance
+ON t2.dist_min = t1.straight_distance
