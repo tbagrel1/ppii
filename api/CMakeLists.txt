@@ -33,4 +33,4 @@ add_executable(udp
         lib/http_status.c lib/http_status.h)
 
 find_library(ODPIC_PATH odpic)
-target_link_libraries(api "${ODPIC_PATH}")
+target_link_libraries(api "${ODPIC_PATH}" m)
