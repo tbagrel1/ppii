@@ -363,6 +363,7 @@ void djikstra(int source_no, int destination_no, AdjacencyNode **adj_lists, size
     int drowned_no;
     double min_time;
     double alert_time;
+    bool route_found;
 
     for (;;) {
         drowned_no = -1;
@@ -373,7 +374,12 @@ void djikstra(int source_no, int destination_no, AdjacencyNode **adj_lists, size
                 min_time = times[no];
             }
         }
+        if (drowned_no == -1) {
+            route_found = false;
+            break;
+        }
         if (drowned_no == destination_no) {
+            route_found = true;
             break;
         }
 
@@ -394,13 +400,18 @@ void djikstra(int source_no, int destination_no, AdjacencyNode **adj_lists, size
         is_drowned[drowned_no] = true;
     }
 
-    *p_min_distance = times[destination_no];
+    if (route_found) {
+        *p_min_distance = times[destination_no];
 
-    *p_id_list = NO_NEXT;
-    no = destination_no;
-    while (no != source_no) {
-        IntNode__append(p_id_list, path_ids[no]);
-        no = announcers[no];
+        *p_id_list = NO_NEXT;
+        no = destination_no;
+        while (no != source_no) {
+            IntNode__append(p_id_list, path_ids[no]);
+            no = announcers[no];
+        }
+    } else {
+        *p_min_distance = INFINITY;
+        *p_id_list = NO_NEXT;
     }
 
     free(times);
@@ -414,25 +425,29 @@ void print_djikstra_result(const char *source_icao, const char *destination_icao
     PathNode *p_path;
     IntNode *p_node;
 
-    printf("\nShortest path for %s -> %s: %.2f km via\n", source_icao, destination_icao, min_distance);
-    p_node = id_list;
-    while (p_node != NO_NEXT) {
-        p_path = PathNode__findById(path_list, p_node->value);
-        if (p_path == NULL) {
-            printf("Should not happen :/\n");
-        } else {
-            if (p_node != id_list) {
-                printf("|");
+    if (min_distance != INFINITY) {
+        printf("\nShortest path for %s -> %s: %.2f km via\n", source_icao, destination_icao, min_distance);
+        p_node = id_list;
+        while (p_node != NO_NEXT) {
+            p_path = PathNode__findById(path_list, p_node->value);
+            if (p_path == NULL) {
+                printf("Should not happen :/\n");
+            } else {
+                if (p_node != id_list) {
+                    printf("|");
+                }
+                nicao_to_icao(p_path->source_nicao, a_icao);
+                nicao_to_icao(p_path->destination_nicao, b_icao);
+                printf("%s ---[%d]--> %s", a_icao, p_path->id, b_icao);
             }
-            nicao_to_icao(p_path->source_nicao, a_icao);
-            nicao_to_icao(p_path->destination_nicao, b_icao);
-            printf("%s ---[%d]--> %s", a_icao, p_path->id, b_icao);
-        }
 
-        //----------------------
-        p_node = p_node->p_next;
+            //----------------------
+            p_node = p_node->p_next;
+        }
+        printf("\n");
+    } else {
+        printf("No route found for %s -> %s\n", source_icao, destination_icao);
     }
-    printf("\n");
 }
 
 int main(int argc, char **argv) {
